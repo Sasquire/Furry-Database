@@ -1,6 +1,10 @@
 do $$ begin
 	if not exists (select 1 from pg_type where typname = 'post_rating') then
-		create type post_rating as enum ('e', 'q', 's');
+		create type post_rating as enum (
+			'explicit',
+			'questionable',
+			'safe'
+		);
 	end if;
 
 	if not exists (select 1 from pg_type where typname = 'post_status') then
@@ -51,7 +55,7 @@ create table if not exists posts (
 	--
 	parent_id int null,
 	--
-	constraint posts_pkey primary key (post_id),
+	constraint posts_pkey         primary key (post_id),
 	constraint posts_un_change_id unique (change_id)
 );
 
@@ -60,7 +64,7 @@ create table if not exists post_md5s (
 	md5      char(32) not null,
 	file_ext file_type not null,
 	--
-	constraint post_md5s_pk primary key (post_id),
-	constraint post_md5s_un unique (md5),
+	constraint post_md5s_pk       primary key (post_id),
+	constraint post_md5s_un_md5   unique (md5),
 	constraint post_md5s_posts_fk foreign key (post_id) references posts(post_id)
 );

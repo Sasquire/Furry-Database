@@ -91,28 +91,54 @@ function convert_to_post_obj(raw_e621){
 }
 
 async function daily_post_adding(){
-	const response = await db.query('select max(change_id) from posts;');
-	const max_change = response.rows[0].max;
-	console.log(`Max known change_id is ${max_change}`);
+	await regular_update();
+	// todo flagged_check();
+	await deleted_check();
 
-	let page_num = 1;
-	while(true){
-		console.log(`Downloading page ${page_num}`);
-		const posts = await e621.post_list({
-			tags: `change:>${max_change} order:change`,
-			page: page_num
-		});
-		await add_posts_to_db(posts);
+	async function regular_update(){
+		const response = await db.query('select max(change_id) from posts;');
+		const max_change = response.rows[0].max;
+		console.log(`Max known change_id is ${max_change}`);
 
-		if(posts.length <= 320){ break; }
-		page_num++;
+		let page_num = 1;
+		while(true){
+			console.log(`Downloading page ${page_num} of posts`);
+			const posts = await e621.post_list({
+				tags: `change:>${max_change} order:change`,
+				page: page_num
+			});
+			await add_posts_to_db(posts);
+
+			if(posts.length <= 320){ return; }
+			page_num++;
+		}
 	}
 
-	// todo check deleted_index / flagged_index
+	// assumes that any post that may show up as
+	// deleted is already in the database
+	async function deleted_check(){
+		const posts_to_check = [];
+		let page_num = 1;
+		while(true){
+			console.log(`Downloading page ${page_num} of deleted index`);
+			const deleted = await e621.post_deleted_index(page_num);
+			for(const post of deleted){
+				const status_res = await db.query(`select status from posts where post_id = ${post.id}`);
+
+				if(status_res.rows[0].status == 'deleted'){ // caught up to last check
+					console.log('Caught up on deleted index. Downloading posts');
+					return Promise.all(posts_to_check.map(add_post_to_db));
+				} else {
+					posts_to_check.push(post.id);
+				}
+			}
+			page_num++;
+		}
+	}
 }
 
 async function large_post_adding(){
-	let lowest_id_known = 50; // 1 billion
+	let lowest_id_known = 1e9; // 1 billion
 	while(true){ // will force break;
 		console.log(`Checking posts below id:${lowest_id_known}`);
 		
@@ -126,19 +152,17 @@ async function large_post_adding(){
 }
 
 async function parse_args(){
-	await init();
+	await init(); // should this run every time?
 
 	const args = process.argv.slice(2).map(e => e.toLowerCase());
 	switch(args[0]){
-		case 'u':
-		case 'a':
-		case 'update':
-		case 'add': (() => { switch(args[1]){
+		case 'post': (() => { switch(args[1]){
 			case 'daily': return daily_post_adding();
 			case 'large': return large_post_adding();
-			case 'post' : return add_post_to_db(parseInt(args[2], 10));	
+			default     : return add_post_to_db(parseInt(args[1], 10));	
 		}})(); break;
 	}
 }
 
 parse_args();
+//e621.post_deleted_index(1).then(e => Promise.all(e.map(p => p.id).map(p => add_post_to_db(p))))

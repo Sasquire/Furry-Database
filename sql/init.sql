@@ -26,6 +26,16 @@ do $$ begin
 			'webm'
 		);
 	end if;
+
+	if not exists (select 1 from pg_type where typname = 'tag_type') then
+		create type tag_type as enum (
+			'general',
+			'artist',
+			'copyright',
+			'character',
+			'species'
+		);
+	end if;
 	--more types here...
 end$$;
 
@@ -67,4 +77,13 @@ create table if not exists post_md5s (
 	constraint post_md5s_pk       primary key (post_id),
 	constraint post_md5s_un_md5   unique (md5),
 	constraint post_md5s_posts_fk foreign key (post_id) references posts(post_id)
+);
+
+create table if not exists tags (
+	tag_id   int not null,
+	tag_name text not null,
+	tag_type tag_type not null,
+	--
+	constraint tags_pk      primary key (tag_id),
+	constraint tags_un_name unique (tag_name)
 );

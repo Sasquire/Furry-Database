@@ -151,6 +151,36 @@ async function large_post_adding(){
 	}
 }
 
+// todo a method for specific tags?
+// or even a daily tag update
+async function update_tags(){
+	const insert_tags_sql = fs.readFileSync(dir+'/sql/insert_tags.sql', 'utf8');
+	let max_known_id = 0;
+	while(true){
+		console.log(`Downloading tags above tag_id:${max_known_id}`)
+		const raw_tags = await e621.tag_list({
+			order: 'id',
+			show_empty_tags: 1,
+			after_id: max_known_id
+		});
+		if(raw_tags.length == 0){ return; }
+
+		const tags = raw_tags.map(e => ({
+			tag_id: e.id,
+			tag_name: e.name,
+			tag_type: (() => { switch(e.type){
+				case 0: return 'general';
+				case 1: return 'artist';
+				case 3: return 'copyright';
+				case 4: return 'character';
+				case 5: return 'species';
+			}})()
+		}));
+		await db.query(insert_tags_sql, [JSON.stringify(tags)]);
+		max_known_id = tags.slice(-1)[0].tag_id;
+	}
+}
+
 async function parse_args(){
 	await init(); // should this run every time?
 
@@ -161,6 +191,7 @@ async function parse_args(){
 			case 'large': return large_post_adding();
 			default     : return add_post_to_db(parseInt(args[1], 10));	
 		}})(); break;
+		case 'tag': return update_tags();
 	}
 }
 

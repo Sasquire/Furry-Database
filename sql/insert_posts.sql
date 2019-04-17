@@ -14,8 +14,3 @@ on conflict (post_id) do update set
 	description = EXCLUDED.description,
 	parent_id = EXCLUDED.parent_id;
 -- creator_id, file_size, width, and height never change
-
-insert into post_md5s
-select * from json_populate_recordset(null::post_md5s, $1::json)
-on conflict (post_id) do nothing;
--- should never replace md5s 

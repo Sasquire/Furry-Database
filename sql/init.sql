@@ -87,3 +87,10 @@ create table if not exists tags (
 	constraint tags_pk      primary key (tag_id),
 	constraint tags_un_name unique (tag_name)
 );
+
+do $$ begin
+	if not exists (select 1 from  pg_class where relname = 'post_tags_gin') then
+		create index post_tags_gin on posts using gin(tags);
+	end if;
+	--more indexes here...
+end$$;

@@ -23,15 +23,25 @@ const e621 = new (require(__dirname+'/e621_api/api.js'))(options.user_agent);
 require(__dirname+'/e621_api/extras.js');
 
 const sql = {
-	init: fs.readFileSync(__dirname+'/sql/init.sql', 'utf8'),
-	destroy: fs.readFileSync(__dirname+'/sql/destroy.sql', 'utf8'),
-	insert_posts: fs.readFileSync(__dirname+'/sql/insert_posts.sql', 'utf8'),
-	insert_md5s: fs.readFileSync(__dirname+'/sql/insert_post_md5s.sql', 'utf8'),
-	insert_tags: fs.readFileSync(__dirname+'/sql/insert_tags.sql', 'utf8')
+	e621: read_sql('e621'),
+	fn: {
+
+	}
+}
+
+function read_sql(folder){
+	const files = fs.readdirSync(`${__dirname}/sql/${folder}/`)
+	const sql_obj = {};
+	files.forEach(e => {
+		const name = e.split('.')[0];
+		const path = `${__dirname}/sql/${folder}/${e}`
+		sql_obj[name] = fs.readFileSync(path, 'utf8')
+	});
+	return sql_obj;
 }
 
 async function init(){
-	return db.query(sql.init)
+	return db.query(sql.e621.init)
 		.then(() => stamped_message('Initiated'))
 		.catch(console.log);
 }
@@ -49,12 +59,12 @@ async function add_post_to_db(post_id){
 
 async function add_posts_to_db(post_array){
 	const good_posts = post_array.map(convert_to_post_obj);
-	await db.query(sql.insert_posts, [JSON.stringify(good_posts)])
+	await db.query(sql.e621.insert_posts, [JSON.stringify(good_posts)])
 
 	const good_md5s  = post_array
 		.filter(e => e.status != 'deleted' && e.status != 'destroyed')
 		.map(convert_to_post_md5_obj)
-	await db.query(sql.insert_md5s, [JSON.stringify(good_md5s)]);
+	await db.query(sql.e621.insert_files, [JSON.stringify(good_md5s)]);
 }
 
 function convert_to_post_md5_obj(raw_e621){ return {
@@ -99,7 +109,7 @@ async function daily_post_adding(download_extra){
 
 	async function regular_update(){
 		console.log(`Doing the daily update based on change id.${download_extra ? ' Extra posts are being downloaded.' : ''}`);
-		const max_known = await db.query('select max(change_id) from posts;').then(e => e.rows[0].max)
+		const max_known = await db.query('select max(change_id) from e621.posts;').then(e => e.rows[0].max)
 		const max_change = max_known - (download_extra ? options.large_daily.post : 0)
 		console.log(`Max known change_id is ${max_known} starting at ${max_change}`);
 
@@ -116,7 +126,7 @@ async function daily_post_adding(download_extra){
 			page_num++;
 		}
 
-		const new_max = await db.query('select max(change_id) from posts;').then(e => e.rows[0].max)
+		const new_max = await db.query('select max(change_id) from e621.posts;').then(e => e.rows[0].max)
 		console.log(`Caught up on posts. New max change_id is ${new_max}`);
 	}
 
@@ -129,7 +139,7 @@ async function daily_post_adding(download_extra){
 			const deleted = await e621.post_deleted_index(page_num);
 			const db_status = await Promise.all(
 				deleted.map(e => 
-					db.query(`select status from posts where post_id = ${e.id}`)
+					db.query(`select status from e621.posts where post_id = ${e.id}`)
 						.then(p => ({
 							status: p.rows[0] ? p.rows[0].status : 'unknown',
 							post_id: e.id
@@ -175,7 +185,7 @@ async function large_post_adding(lowest_id_known){
 // or even a daily tag update
 async function update_tags(max_known_id){
 	if(max_known_id < 0){
-		max_known_id = await db.query('select max(tag_id) from tags').then(e => e.rows[0].max)
+		max_known_id = await db.query('select max(tag_id) from e621.tags').then(e => e.rows[0].max)
 	}
 	max_known_id = max_known_id || 0;
 	while(true){
@@ -188,7 +198,7 @@ async function update_tags(max_known_id){
 		if(raw_tags.length == 0){ return; }
 
 		const tags = raw_tags.map(to_db_tag);
-		await db.query(sql.insert_tags, [JSON.stringify(tags)]);
+		await db.query(sql.e621.insert_tags, [JSON.stringify(tags)]);
 		max_known_id = tags.slice(-1)[0].tag_id;
 	}
 

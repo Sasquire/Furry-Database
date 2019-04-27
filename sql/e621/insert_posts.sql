@@ -1,5 +1,5 @@
-insert into posts 
-select * from json_populate_recordset(null::posts, $1::json)
+insert into e621.posts 
+select * from json_populate_recordset(null::e621.posts, $1::json)
 on conflict (post_id) do update set
 	change_id = EXCLUDED.change_id,
 	created_at = EXCLUDED.created_at,

@@ -1,0 +1,1 @@
+select max(change_id) from e621.posts;

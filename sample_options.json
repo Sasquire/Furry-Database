@@ -1,0 +1,14 @@
+{
+	"e621_user_agent": "Here is a test user Agent",
+	"postgres_info": {
+		"host": "localhost",
+		"database": "e621",
+		"port": 5432,
+		"user": "",
+		"password": "",
+		"multipleStatements": true
+	},
+	"sql": [
+		"e621"
+	]
+}

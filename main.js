@@ -1,3 +1,4 @@
+const args = require('minimist')(process.argv.slice(2));
 const { db, sql } = require('./utils.js');
 
 function run_all_scripts_named(name){
@@ -10,22 +11,24 @@ function run_all_scripts_named(name){
 	return Promise.all(scripts);
 }
 
-async function init(){
-	return run_all_scripts_named('init')
-		.then(() => stamped_message('Initiated'))
-		.catch(console.log);
+function opt_string(obj){
+	return `Expecting one of [${Object.keys(obj).map(e => `"${e}"`).join(', ')}]`
 }
 
-async function destroy(){
-	return run_all_scripts_named('destroy')
-		.then(() => stamped_message('Database deleted'))
-		.catch(console.log);
+function stamped_message(msg){
+	console.log(`${msg} - ${new Date().toISOString()}`)
 }
 
 const opts = {
 	general: {
-		init: () => true,
-		"dont do this it drops the db": () => destroy()
+		maintenance: {
+			init: () => run_all_scripts_named('init')
+				.then(() => stamped_message('Initiated'))
+				.catch(console.log),
+			"don't do this it drops the db": () => run_all_scripts_named('destroy')
+				.then(() => stamped_message('Database deleted'))
+				.catch(console.log)
+		}
 	},
 	e621: {
 		post: {
@@ -37,57 +40,49 @@ const opts = {
 				starting = parseInt(starting, 10) || 0
 				return require('./e621.js').large(starting);
 			},
-			_: (...ids) => {
+			update: (...ids) => {
 				ids = ids.map(e => parseInt(e, 10))
 				const add_post = require('./e621.js').post
 				return Promise.all(ids.map(e => add_post(e, true)))
 			}
 		},
-		tags: (starting) => {
-			starting = parseInt(starting, 10) || 1
-			return require('./e621.js').tags(starting);
+		tags: {
+			update: (starting) => {
+				starting = parseInt(starting, 10) || 1
+				return require('./e621.js').tags(starting);
+			}
 		}
 	}
 }
 
 async function parse_args(){
 	stamped_message('Started')
-	await init(); // should this run every time?
+	await opts.general.maintenance.init(); // should this run every time?
 	console.log('|----------------------------------|');
-	await (() => {
-		const args = process.argv.slice(2).map(e => e.toLowerCase());
-		for(let i = 0, last = opts; i < args.length; i++){
-			const arg = args[i];
-			const next = last[arg];
-			const generic = last['_'];
-			const rest = args.slice(i);
-			if(!next && !generic){
-				const expected = Object.keys(last)
-					.map(e => `'${e}'`)
-					.join(', ');
-				return console.log(`Error unknown argument '${arg}' at position ${i}. Expected one of [${expected}]`)
-			} else if (!next && generic){
-				return generic(...rest)
-			} else if(typeof next == 'function'){
-				return next(...rest.slice(1));
-			} else if(i == args.length-1){
-				const expected = Object.keys(next)
-					.map(e => `'${e}'`)
-					.join(', ');
-				return console.log(`No argument at position ${i+1}. Expected one of [${expected}]`)
-			} else {
-				last = next
-			}
-		}
-	})()
-	await db.end()
-	console.log('|----------------------------------|');
-	stamped_message('Closing')
-	console.log();
-}
+	
+	try {
+		const schema_string = args.s || args.schema || 'none';
+		const group_string = args.g || args.group || 'none';
+		const command_string = args.c || args.command || 'none';
+		
+		const schema = opts[schema_string];
+		if(!schema){ throw `Unknown schema "${schema_string}". Use "-s". ${opt_string(opts)}`; }
 
-function stamped_message(msg){
-	console.log(`${msg} - ${new Date().toISOString()}`)
+		const group = schema[group_string];
+		if(!group){ throw `Unknown group "${group_string}". Use "-g". ${opt_string(schema)}`; }
+
+		const command = group[command_string];
+		if(!command){ throw `Unknown command "${command_string}". Use "-c". ${opt_string(group)}`; }
+
+		await command(...args._);
+	} catch(e) {
+		console.log(e)
+	} finally {
+		await db.end()
+		console.log('|----------------------------------|');
+		stamped_message('Closing')
+		console.log();
+	}
 }
 
 parse_args();

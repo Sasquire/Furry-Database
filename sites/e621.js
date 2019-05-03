@@ -1,4 +1,4 @@
-const utils = require('./utils.js');
+const utils = require('./../utils.js');
 const db = utils.db
 const sql = utils.sql.e621;
 const e621 = utils.e621_api;

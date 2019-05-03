@@ -1,8 +1,14 @@
 {
 	"e621_user_agent": "Here is a test user Agent",
+	"furry_network": {
+		"user_agent": "Here is a test user Agent",
+		"username": "username@mail.com",
+		"password": "password123",
+		"client_secret": ""
+	},
 	"postgres_info": {
 		"host": "localhost",
-		"database": "e621",
+		"database": "furry",
 		"port": 5432,
 		"user": "",
 		"password": "",

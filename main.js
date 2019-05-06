@@ -34,22 +34,22 @@ const opts = {
 		post: {
 			daily: (time_shift) => {
 				time_shift = parseInt(time_shift, 10) || 0
-				return require('./sites/e621.js').daily(time_shift);
+				return require('./sites/e621/e621.js').daily(time_shift);
 			},
 			large: (starting) => {
 				starting = parseInt(starting, 10) || 0
-				return require('./sites/e621.js').large(starting);
+				return require('./sites/e621/e621.js').large(starting);
 			},
 			update: (...ids) => {
 				ids = ids.map(e => parseInt(e, 10))
-				const add_post = require('./sites/e621.js').post
+				const add_post = require('./sites/e621/e621.js').post
 				return Promise.all(ids.map(e => add_post(e, true)))
 			}
 		},
 		tags: {
 			update: (starting) => {
 				starting = parseInt(starting, 10) || 1
-				return require('./sites/e621.js').tags(starting);
+				return require('./sites/e621/e621.js').tags(starting);
 			}
 		}
 	}

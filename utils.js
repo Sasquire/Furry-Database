@@ -36,10 +36,16 @@ async function request(options){
 	})
 }
 
+function save_json(site, json){
+	const file_path = `${options.json_path}${site}_${new Date().toISOString()}.json`;
+	fs.writeFileSync(file_path, JSON.stringify(json));
+}
+
 module.exports = {
 	sql: make_all_sql(options.sites),
 	db: db,
 	e621_api: e621_api,
 	request: request,
-	raw_request: raw_request
+	raw_request: raw_request,
+	save_json: save_json
 }

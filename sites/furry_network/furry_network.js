@@ -62,6 +62,7 @@ function post_obj(e){ return {
 }}
 
 async function add_posts_to_db(raw_posts){
+	utils.save_json('fn', raw_posts)
 	raw_posts = sort_join(raw_posts)
 	const posts = raw_posts.map(post_obj);
 	await db.query(sql.insert_posts, [JSON.stringify(posts)])

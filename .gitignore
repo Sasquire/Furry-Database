@@ -1,4 +1,5 @@
 node_modules
 package-lock.json
-e621_api
 options.json
+json
+images

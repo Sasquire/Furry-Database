@@ -3,6 +3,7 @@ const fs = require('fs');
 const e621_api = new (require('e621_api'))(options.e621_user_agent);
 const { Pool } = require('pg');
 const db = new Pool(options.postgres_info);
+const raw_request = require('request');
 
 function make_all_sql(sites){
 	const sql_obj = {};
@@ -23,8 +24,22 @@ function make_all_sql(sites){
 	return sql_obj
 }
 
+async function request(options){
+	return new Promise((resolve, reject) => {
+		raw_request(options, (e, h, r) => {
+			if(e || h.statusCode != 200){
+				reject(e || h.statusCode);
+			} else {
+				resolve(JSON.parse(r || '[]'));
+			}
+		})
+	})
+}
+
 module.exports = {
 	sql: make_all_sql(options.sites),
 	db: db,
-	e621_api: e621_api
+	e621_api: e621_api,
+	request: request,
+	raw_request: raw_request
 }

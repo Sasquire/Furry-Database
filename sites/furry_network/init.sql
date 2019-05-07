@@ -67,7 +67,7 @@ create table if not exists fn.posts (
 	views     int not null,
 	promotes  int not null,
 	comments  int not null,
-	score     int not null,
+	fav_count int not null,
 	--
 	constraint posts_pkey  primary key (post_type, post_id)
 );

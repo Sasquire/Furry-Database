@@ -1,135 +1,78 @@
-const opts = require('./../options.json').furry_network;
-const raw_request = require('request');
-let login_response = {};
+const md5 = require('js-md5')
+const { download } = require('./api.js');
+const utils = require('./../../utils.js');
+const db = utils.db;
+const sql = utils.sql.furry_network;
 
-async function request(options){
-	return new Promise((resolve, reject) => {
-		raw_request(options, (e, h, r) => {
-			if(e || h.statusCode != 200){
-				reject(e || h.statusCode);
-			} else {
-				resolve(JSON.parse(r || '[]'));
-			}
-		})
-	})
-}
+function file_obj(e){ return {
+	url: (() => { switch(e._type){
+		case 'photo':
+		case 'artwork': return e._source.images.original
+		case 'multimedia': return e._source.url
+	//	case 'story': return things(e._source.content)
+	}})(),
+	orig_md5: e._source.md5 ? e._source.md5 : md5(e._source.content),
+	
+	// ignore e._source.extension because unreliable
+	// https://www.iana.org/assignments/media-types/media-types.xhtml
+	file_type: (() => { switch(e._source.content_type){
+		case 'image/png': return 'png';
+		case 'image/jpeg': return 'jpg';
+		case 'image/gif': return 'gif';
+		// only stories have no content_type
+		// the whole story is actually in the api
+		case undefined: return 'txt';
+		// https://stackoverflow.com/questions/10688588/which-mime-type-should-i-use-for-mp3#10688641
+		case 'audio/mpeg': return 'mp3';
+		case 'application/x-shockwave-flash': return 'swf';
+		case 'video/webm': return 'webm';
+		case 'audio/x-wav': return 'wav';
+		
+		case 'audio/mp4':
+		case 'video/mp4': return 'mp4';
 
-async function download_page(type, page_num){
-	const before = page_num * 72;
-	const options = {
-		// https://furrynetwork.com/api/search/artwork?size=72&&from=0
-		url:`https://furrynetwork.com/api/search/${type}?size=72&&from=${before}`,
-		headers: {
-			'authorization': 'Bearer '+ login_response.access_token,
-			'user-agent': opts.user_agent
-		}
-	}
-	return Promise.all([
-		request(options),
-		new Promise(r => setTimeout(r, 3000))
-	])
-	.then(e => e[0])
-	.catch(async e => {
-		if(e != 401){ throw `Page ${type}--${page_num}-- errors !-- ${e} --!`; }
-		console.log('Attempting to refresh')
-		return oauth('refresh')
-			.then(() => download_page(type, page_num));
-	});
-}
+		case 'application/octet-stream':
+		case 'text/html':
+		default: return 'unknown'
+	}})()
+}}
 
-function oauth(oauth_method){
-	// this is really ugly, but it is the cleanest I have found
-	// i did not want three methods that looked almost the same
-	// please make this good
-	const methods = {
-		login: {
-			method: "POST",
-			url: 'https://furrynetwork.com/api/oauth/token',
-			headers: {
-				'content-type': 'application/x-www-form-urlencoded',
-				'user-agent': opts.user_agent
-			},
-			formData: {
-				username: opts.username,
-				password: opts.password,
-				grant_type: 'password',
-				client_id: '123',
-				client_secret: opts.client_secret
-			}
-		},
-		logout: {
-			method: "POST",
-			url: 'https://furrynetwork.com/api/oauth/logout',
-			headers: {
-				'content-type': 'application/x-www-form-urlencoded',
-				'user-agent': opts.user_agent,
-				authorization: `Bearer ${login_response.access_token}`
-			},
-			form: `{"refresh_token":"${login_response.refresh_token}"}`
-		},
-		refresh: {
-			method: "POST",
-			url: 'https://furrynetwork.com/api/oauth/token',
-			headers: {
-				'content-type': 'application/x-www-form-urlencoded',
-				'user-agent': opts.user_agent,
-				authorization: `Bearer ${login_response.access_token}`
-			},
-			formData: {
-				grant_type: 'refresh_token',
-				client_id: '123',
-				refresh_token: login_response.refresh_token
-			}
-		}
-	}
+function post_obj(e){ return {
+	post_type: e._type,
+	post_id: e._source.id,
 
-	console.log(`oauth ${oauth_method}ing`);
-	return request(methods[oauth_method]).then(e => {
-		if(oauth_method != 'login'){ return; }
-		login_response = e
-	}).catch(e => {
-		throw `Error with ${oauth_method}ing !-- ${e} --!`;
-	})
-}
+	creator_id: e._source.character_id,
+	created_at: new Date(e._source.created),
 
-// artwork
-// photo
-// story
-// multimedia
-async function download_until_id(type, id){
-	try {
-		await oauth('login');
-		let min_known_id = 0;
-		for(let page = 0; min_known_id < id; page++){
-			const data = await download_page(type, page)
-				.then(sort_join)
-			min_known_id = data[0]._source.id;
-			
-			// insert into db here
-			// also save data to a file
-			// because the db is lossy
-			// and we want to keep the data
-			
-			//console.log(data)
-		}
-	} catch(e){
-		console.log(e)
-	} finally {
-		await oauth('logout').catch(console.log)
-	}
+	title: e._source.title || '',
+	description: e._source.description || '',
+	rating: (() => { switch(e._source.rating){
+		case 0: return 'general';
+		case 1: return 'mature';
+		case 2: return 'explicit';
+	}})(),
+
+	file_size: e._source.size,
+	tags: e._source.tags,
+
+	views: e._source.views,
+	promotes: e._source.promotes,
+	comments: e._source.comments,
+	fav_count: e._source.favorites
+}}
+
+async function add_posts_to_db(raw_posts){
+	raw_posts = sort_join(raw_posts)
+	const posts = raw_posts.map(post_obj);
+	await db.query(sql.insert_posts, [JSON.stringify(posts)])
+	// todo, files, collections etc
 }
 
 function sort_join(json){
 	return json.hits
 		.concat(json.before)
 		.concat(json.after)
-		.sort((a, b) => b._source.id - a._source.id)
+		.sort((a, b) => a._source.id - b._source.id)
 }
 
-module.exports = {
-	download: download_until_id
-}
-
-//download_until_id('artwork', 30)
-
-
+download('artwork', 1597323, add_posts_to_db)

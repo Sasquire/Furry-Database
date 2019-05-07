@@ -1,10 +1,13 @@
 {
+	"image_path":"/absolute/path/to/images/",
+	"json_path":"/absolute/path/to/json/",
 	"e621_user_agent": "Here is a test user Agent",
 	"furry_network": {
 		"user_agent": "Here is a test user Agent",
 		"username": "username@mail.com",
 		"password": "password123",
-		"client_secret": ""
+		"client_secret": "",
+		"wait_time": 3000
 	},
 	"postgres_info": {
 		"host": "localhost",
@@ -15,6 +18,7 @@
 		"multipleStatements": true
 	},
 	"sql": [
-		"e621"
+		"e621",
+		"furry_network"
 	]
 }

@@ -1,6 +1,5 @@
 const args = require('minimist')(process.argv.slice(2));
 const { db, sql } = require('./utils.js');
-const fs = require('fs');
 
 function run_all_scripts_named(name){
 	const scripts = Object.values(sql)
@@ -23,20 +22,17 @@ function stamped_message(msg){
 const opts = {
 	general: {
 		maintenance: {
-			init: () => run_all_scripts_named('init')
-				.then(() => {
-					const { json_path, image_path } = require('./options.json');
-					if(!fs.existsSync(json_path)){
-						fs.mkdirSync(json_path);
-					}
-					if(!fs.existsSync(image_path)){
-						fs.mkdirSync(image_path);
-					}
-				})
-				.then(() => stamped_message('Initiated'))
-				.catch(console.log),
 			"don't do this it drops the db": () => run_all_scripts_named('destroy')
 				.then(() => stamped_message('Database deleted'))
+				.catch(console.log)
+		},
+		init: {
+			first: () => {
+				require('./utils').make_folders();
+				return opts.general.init.every()
+			}, 
+			every: () => run_all_scripts_named('init')
+				.then(() => stamped_message('Initiated'))
 				.catch(console.log)
 		}
 	},
@@ -67,7 +63,7 @@ const opts = {
 
 async function parse_args(){
 	stamped_message('Started')
-	await opts.general.maintenance.init(); // should this run every time?
+	await opts.general.init.every(); // should this run every time?
 	console.log('|----------------------------------|');
 	
 	try {

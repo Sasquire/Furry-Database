@@ -49,21 +49,26 @@ function tag_obj(e621_json){ return {
 	}})()
 }}
 
-async function add_post_to_db(post_id, message){
+async function add_post(post_id, message){
 	const data = await e621.post_show_id(post_id);
 	if(message === true){ console.log(`Adding post ${post_id} to db`); }
 	if(data.status == 'destroyed'){ return; }
-	return add_posts_to_db([data]);
+	return add_posts([data]);
 }
 
-async function add_posts_to_db(raw_posts){
-	const posts = raw_posts.map(post_obj);
+async function add_posts(post_array){
+	utils.save_json('e621', 'posts', post_array);
+	return insert_posts(post_array)
+}
+
+async function insert_posts(post_array){
+	const posts = post_array.map(post_obj);
 	await db.query(sql.insert_posts, [JSON.stringify(posts)])
 
-	const files = raw_posts
+	const files = post_array
 		.filter(e => e.status != 'deleted' && e.status != 'destroyed')
 		.map(file_obj);
-	
+
 	await db.query(sql.insert_files, [JSON.stringify(files)]);
 }
 
@@ -98,7 +103,7 @@ async function daily_post_adding(time_shift){
 				tags: `change:>${max_change} order:change`,
 				page: page_num
 			});
-			await add_posts_to_db(posts);
+			await add_posts(posts);
 
 			if(posts.length < 320){ break; }
 		}
@@ -124,7 +129,7 @@ async function daily_post_adding(time_shift){
 				.map(e => e.post_id);
 			if(to_update.length != 0){
 				console.log(`Updating deleted posts ${to_update.join(' ')}`);
-				await Promise.all(to_update.map(add_post_to_db));
+				await Promise.all(to_update.map(add_post));
 			}
 
 			const was_deleted = db_status.some(e => e.status == 'deleted')
@@ -147,7 +152,7 @@ async function large_post_adding(lowest_id_known){
 		const posts = raw_posts.filter(p => p.status != 'destroyed');
 		if(posts.length == 0){ break; }
 		
-		await add_posts_to_db(posts);
+		await add_posts(posts);
 		lowest_id_known = posts.sort((a, b) => b.id - a.id).slice(-1)[0].id;
 	}
 }
@@ -163,11 +168,9 @@ async function update_tags(max_known_id){
 			show_empty_tags: 1,
 			after_id: max_known_id
 		});
+		utils.save_json('e621', 'tags', raw_tags);
 		if(raw_tags.length == 0){ return; }
-
-		const tags = raw_tags.map(tag_obj);
-		await db.query(sql.insert_tags, [JSON.stringify(tags)]);
-		max_known_id = tags.slice(-1)[0].tag_id;
+		max_known_id = await insert_tags(raw_tags);
 	}
 
 	function max_tag(){
@@ -176,9 +179,16 @@ async function update_tags(max_known_id){
 	}
 }
 
+async function insert_tags(tag_array){
+	const tags = tag_array.map(tag_obj);
+	await db.query(sql.insert_tags, [JSON.stringify(tags)]);
+	return tags.slice(-1)[0].tag_id;
+}
+
 module.exports = {
-	post: add_post_to_db,
+	post: add_post,
 	daily: daily_post_adding,
 	large: large_post_adding,
-	tags: update_tags
+	tags: update_tags,
+	insert_posts: insert_posts
 }

@@ -1,4 +1,5 @@
 const opts = require('./../../options.json').furry_network;
+const utils = require('./../../utils.js')
 const { request } = require('./../../utils.js');
 let login_response = {};
 
@@ -89,6 +90,7 @@ async function download_until_id(type, id, callback){
 		let min_known_id = 1e9;
 		for(let page = 0; min_known_id > id; page++){
 			const data = await download_page(type, page)
+			utils.save_json('fn', type, data)
 			min_known_id = sort_join(data)[0]._source.id;
 			callback(data);
 		}

@@ -1,6 +1,7 @@
 {
 	"image_path":"/absolute/path/to/images/",
 	"json_path":"/absolute/path/to/json/",
+	"save_json": true,
 	"e621_user_agent": "Here is a test user Agent",
 	"furry_network": {
 		"user_agent": "Here is a test user Agent",

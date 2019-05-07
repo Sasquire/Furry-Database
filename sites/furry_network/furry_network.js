@@ -61,8 +61,7 @@ function post_obj(e){ return {
 	fav_count: e._source.favorites
 }}
 
-async function add_posts_to_db(raw_posts){
-	utils.save_json('fn', raw_posts)
+async function insert_posts(raw_posts){
 	raw_posts = sort_join(raw_posts)
 	const posts = raw_posts.map(post_obj);
 	await db.query(sql.insert_posts, [JSON.stringify(posts)])
@@ -76,4 +75,8 @@ function sort_join(json){
 		.sort((a, b) => a._source.id - b._source.id)
 }
 
-download('artwork', 1597323, add_posts_to_db)
+download('artwork', 1597308, insert_posts)
+
+module.exports = {
+	insert_posts: insert_posts
+}

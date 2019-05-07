@@ -36,9 +36,10 @@ async function request(options){
 	})
 }
 
-function save_json(site, json){
+function save_json(site, message, json){
+	if(!options.save_json){ return; }
 	make_folder(options.json_path)
-	const file_path = `${options.json_path}${site}_${new Date().toISOString()}.json`;
+	const file_path = `${options.json_path}${site}_${message}_${new Date().getTime()}.json`;
 	fs.writeFileSync(file_path, JSON.stringify(json));
 }
 

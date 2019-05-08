@@ -1,1 +1,0 @@
-select max(post_id) from fn.posts where post_type = $1;

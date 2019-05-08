@@ -80,19 +80,15 @@ function oauth(oauth_method){
 	})
 }
 
-// artwork
-// photo
-// story
-// multimedia
-async function download_until_id(type, id, callback){
+async function download_until_id(type, max_db_date, callback){
 	try {
 		await oauth('login');
-		let min_known_id = 1e9;
-		for(let page = 0; min_known_id > id; page++){
+		let min_date = new Date(new Date().getTime() + 1e12);
+		for(let page = 0; max_db_date < min_date; page++){
 			console.log(`Downloading page ${page}`)
 			const data = await download_page(type, page)
 			utils.save_json('furry_network', type, data)
-			min_known_id = sort_join(data)[0]._source.id;
+			min_date = get_min_date(data);
 			callback(data);
 		}
 	} catch(e){
@@ -102,11 +98,22 @@ async function download_until_id(type, id, callback){
 	}
 }
 
-function sort_join(json){
+function get_min_date(json){
 	return json.hits
 		.concat(json.before)
 		.concat(json.after)
-		.sort((a, b) => a._source.id - b._source.id)
+		.map(updated_at)
+		.sort((a, b) => a - b)
+		.slice(0, 1)[0]
+}
+
+function updated_at(post){
+	return new Date(Math.max.apply(Math, [
+		new Date(post._source.created),
+		new Date(post._source.updated || 0),
+		new Date(post._source.published || 0),
+		new Date(post._source.made_public_date || 0)
+	]));
 }
 
 module.exports = {

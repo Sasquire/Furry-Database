@@ -37,12 +37,22 @@ function file_obj(e){ return {
 	}})()
 }}
 
+function updated_at(post){
+	return new Date(Math.max.apply(Math, [
+		new Date(post._source.created),
+		new Date(post._source.updated || 0),
+		new Date(post._source.published || 0),
+		new Date(post._source.made_public_date || 0)
+	]));
+}
+
 function post_obj(e){ return {
 	post_type: e._type,
 	post_id: e._source.id,
 
 	creator_id: e._source.character_id,
 	created_at: new Date(e._source.created),
+	updated_at: updated_at(e),
 
 	title: e._source.title || '',
 	description: e._source.description || '',
@@ -61,28 +71,26 @@ function post_obj(e){ return {
 	fav_count: e._source.favorites
 }}
 
+// artwork
+// photo
+// story
+// multimedia
 async function update(type){
-	const response = await db.query(sql.max_post, [type])
-	const max = response.rows[0] ? response.rows[0].max : 0
+	const response = await db.query(sql.max_date, [type])
+	const max = new Date(response.rows[0] ? response.rows[0].max : 0)
 	console.log(max)
 	await download(type, max, insert_posts)
 }
 
 async function insert_posts(raw_posts){
-	raw_posts = sort_join(raw_posts)
+	raw_posts = raw_posts.hits
+		.concat(raw_posts.before)
+		.concat(raw_posts.after);
 	const posts = raw_posts.map(post_obj);
 	await db.query(sql.insert_posts, [JSON.stringify(posts)])
 	// todo, files, collections etc
 }
 
-function sort_join(json){
-	return json.hits
-		.concat(json.before)
-		.concat(json.after)
-		.sort((a, b) => a._source.id - b._source.id)
-}
-
-//update('artwork')
 module.exports = {
 	insert_posts: insert_posts,
 	update: update

@@ -55,6 +55,7 @@ create table if not exists fn.posts (
 	post_id    int not null,
 	--
 	created_at  timestamp without time zone not null,
+	updated_at  timestamp without time zone not null,
 	creator_id  int not null,
 	--
 	title        text not null default ''::text,

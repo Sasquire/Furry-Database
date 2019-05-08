@@ -72,3 +72,12 @@ create table if not exists fn.posts (
 	--
 	constraint posts_pkey  primary key (post_type, post_id)
 );
+
+create table if not exists fn.collections (
+	post_type   fn.post_type not null,
+	post_id     int not null,
+	collection  int not null,
+	--
+	constraint collections_un_entry unique (post_type, post_id, collection),
+	constraint collections_fk  foreign key (post_id, post_type) references fn.posts (post_id, post_type)
+);

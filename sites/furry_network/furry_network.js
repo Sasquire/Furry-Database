@@ -92,7 +92,19 @@ async function insert_posts(raw_posts){
 		.concat(raw_posts.after);
 	const posts = raw_posts.map(post_obj);
 	await db.query(sql.insert_posts, [JSON.stringify(posts)])
+	await do_collections(raw_posts)
 	// todo, files, collections etc
+}
+
+async function do_collections(posts){
+	const collections = [].concat.apply([], posts
+		.filter(e => e._source.collection_ids.length != 0)
+		.map(e => e._source.collection_ids.map(p => ({
+			post_id: e._source.id,
+			post_type: e._type,
+			collection: p
+		}))));
+	return db.query(sql.insert_collection, [JSON.stringify(collections)])
 }
 
 module.exports = {

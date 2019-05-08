@@ -52,7 +52,7 @@ function post_obj(e){ return {
 		case 2: return 'explicit';
 	}})(),
 
-	file_size: e._source.size,
+	file_size: e._type == 'story' ? e._source.content.length : e._source.size,
 	tags: e._source.tags,
 
 	views: e._source.views,
@@ -60,6 +60,13 @@ function post_obj(e){ return {
 	comments: e._source.comments,
 	fav_count: e._source.favorites
 }}
+
+async function update(type){
+	const response = await db.query(sql.max_post, [type])
+	const max = response.rows[0] ? response.rows[0].max : 0
+	console.log(max)
+	await download(type, max, insert_posts)
+}
 
 async function insert_posts(raw_posts){
 	raw_posts = sort_join(raw_posts)
@@ -75,8 +82,8 @@ function sort_join(json){
 		.sort((a, b) => a._source.id - b._source.id)
 }
 
-download('artwork', 1597308, insert_posts)
-
+//update('artwork')
 module.exports = {
-	insert_posts: insert_posts
+	insert_posts: insert_posts,
+	update: update
 }

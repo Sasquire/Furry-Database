@@ -89,8 +89,9 @@ async function download_until_id(type, id, callback){
 		await oauth('login');
 		let min_known_id = 1e9;
 		for(let page = 0; min_known_id > id; page++){
+			console.log(`Downloading page ${page}`)
 			const data = await download_page(type, page)
-			utils.save_json('fn', type, data)
+			utils.save_json('furry_network', type, data)
 			min_known_id = sort_join(data)[0]._source.id;
 			callback(data);
 		}

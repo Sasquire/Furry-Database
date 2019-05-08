@@ -34,6 +34,14 @@ const opts = {
 			every: () => run_all_scripts_named('init')
 				.then(() => stamped_message('Initiated'))
 				.catch(console.log)
+		},
+		restore: {
+			fn: (folder) => {
+				if(!folder){ throw 'You must supply a folder name' }
+				const { insert_posts } = require('./sites/furry_network/furry_network');
+				const { insert_files } = require('./utils');
+				return insert_files(folder, insert_posts);
+			},
 		}
 	},
 	e621: {

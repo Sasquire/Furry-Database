@@ -39,13 +39,16 @@ async function request(options){
 function save_json(site, message, json){
 	if(!options.save_json){ return; }
 	make_folder(options.json_path)
-	const file_path = `${options.json_path}${site}_${message}_${new Date().getTime()}.json`;
+	make_folder(options.json_path + site + '/')
+	make_folder(options.json_path + site + '/' + message + '/')
+	const file_path = `${options.json_path}${site}/${message}/${new Date().getTime()}.json`;
 	fs.writeFileSync(file_path, JSON.stringify(json));
 }
 
 function make_folders(){
 	make_folder(options.json_path);
 	make_folder(options.image_path);
+	// todo make folders for json
 	const names = new Array(256)
 		.fill(0)
 		.map((e, i) => i.toString(16).padStart(2, '0'))
@@ -63,6 +66,18 @@ function make_folder(path){
 	}
 }
 
+async function insert_files(directory, insert_func){
+	const file_names = fs.readdirSync(directory)
+		.map(file => directory + file)
+
+	for(const file_name of file_names){
+		console.log(file_name)
+		const text = fs.readFileSync(file_name, 'utf8');
+		const data = JSON.parse(text)
+		await insert_func(data)
+	}
+}
+
 module.exports = {
 	sql: make_all_sql(options.sites),
 	db: db,
@@ -71,5 +86,6 @@ module.exports = {
 	raw_request: raw_request,
 	save_json: save_json,
 	make_folder: make_folder,
-	make_folders: make_folders
+	make_folders: make_folders,
+	insert_files: insert_files
 }

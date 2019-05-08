@@ -66,6 +66,20 @@ const opts = {
 				return require('./sites/e621/e621.js').tags(starting);
 			}
 		}
+	},
+	furry_network: {
+		update: {
+			artwork: () => require('./sites/furry_network/furry_network.js').update('artwork'),
+			multimedia: () => require('./sites/furry_network/furry_network.js').update('multimedia'),
+			photo: () => require('./sites/furry_network/furry_network.js').update('photo'),
+			story: () => require('./sites/furry_network/furry_network.js').update('story')
+		},
+		download: {
+			artwork: () => require('./sites/furry_network/furry_network.js').download('artwork'),
+			multimedia: () => require('./sites/furry_network/furry_network.js').download('multimedia'),
+			photo: () => require('./sites/furry_network/furry_network.js').download('photo'),
+			story: () => require('./sites/furry_network/furry_network.js').download('story')
+		}
 	}
 }
 

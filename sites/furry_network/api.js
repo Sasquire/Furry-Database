@@ -89,6 +89,7 @@ async function download_until_id(type, max_db_date, callback){
 			const data = await download_page(type, page)
 			utils.save_json('furry_network', type, data)
 			min_date = get_min_date(data);
+			console.log(min_date)
 			callback(data);
 		}
 	} catch(e){
@@ -104,7 +105,7 @@ function get_min_date(json){
 		.concat(json.after)
 		.map(updated_at)
 		.sort((a, b) => a - b)
-		.slice(0, 1)[0]
+		.slice(0, 1)[0] || new Date(0)
 }
 
 function updated_at(post){

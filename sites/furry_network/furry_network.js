@@ -82,6 +82,10 @@ async function update(type){
 	await download(type, max, insert_posts)
 }
 
+async function download_all(type){
+	return download(type, new Date(0), insert_posts);
+}
+
 async function insert_posts(raw_posts){
 	raw_posts = raw_posts.hits
 		.concat(raw_posts.before)
@@ -93,5 +97,6 @@ async function insert_posts(raw_posts){
 
 module.exports = {
 	insert_posts: insert_posts,
+	download: download_all,
 	update: update
 }

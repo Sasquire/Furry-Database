@@ -5,13 +5,16 @@ const db = utils.db;
 const sql = utils.sql.furry_network;
 
 function file_obj(e){ return {
+	post_type: e._type,
+	post_id: e._source.id,
+
 	url: (() => { switch(e._type){
 		case 'photo':
 		case 'artwork': return e._source.images.original
 		case 'multimedia': return e._source.url
-	//	case 'story': return things(e._source.content)
+		case 'story': return null
 	}})(),
-	orig_md5: e._source.md5 ? e._source.md5 : md5(e._source.content),
+	md5: e._type != 'story' ? e._source.md5 : md5(e._source.content),
 	
 	// ignore e._source.extension because unreliable
 	// https://www.iana.org/assignments/media-types/media-types.xhtml
@@ -91,8 +94,14 @@ async function insert_posts(raw_posts){
 		.concat(raw_posts.before)
 		.concat(raw_posts.after);
 	const posts = raw_posts.map(post_obj);
+	const files = raw_posts
+		// artwork 1560272 has no md5?
+		// this means its url wont be in the db
+		.filter(e => e._type != 'story' && e._source.md5)
+		.map(file_obj);
 	await db.query(sql.insert_posts, [JSON.stringify(posts)])
-	await do_collections(raw_posts)
+	await db.query(sql.insert_files, [JSON.stringify(files)])
+	await do_collections(raw_posts)	
 	// todo, files, collections etc
 }
 

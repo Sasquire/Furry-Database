@@ -81,3 +81,17 @@ create table if not exists fn.collections (
 	constraint collections_un_entry unique (post_type, post_id, collection),
 	constraint collections_fk  foreign key (post_id, post_type) references fn.posts (post_id, post_type)
 );
+
+create table if not exists fn.files (
+	post_type  fn.post_type not null,
+	post_id    int not null,
+	--
+	md5        char(32) not null,
+	file_type  fn.file_type not null,
+	url        text, -- a text file doesnt have a url
+	--
+	constraint files_pkey    primary key (post_type, post_id),
+	constraint files_fk      foreign key (post_id, post_type) references fn.posts (post_id, post_type)--,
+	--constraint files_un_md5  unique (md5)
+	-- should really have a solution to this
+);

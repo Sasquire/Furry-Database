@@ -1,6 +1,6 @@
-const md5 = require('js-md5')
 const { download } = require('./api.js');
 const utils = require('./../../utils.js');
+const md5 = utils.md5;
 const db = utils.db;
 const sql = utils.sql.furry_network;
 

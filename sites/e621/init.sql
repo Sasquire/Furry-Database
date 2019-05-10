@@ -112,3 +112,26 @@ create table if not exists e621.tags (
 --	end if;
 --	--more indexes here...
 --end$$;
+
+create or replace view e621.urls as (
+	select 
+		post_id,
+		concat(
+			'https://static1.e621.net/data/',
+			substring(md5, 1, 2),
+			'/',
+			substring(md5, 3, 2),
+			'/',
+			md5,
+			'.',
+			file_ext
+		) as url
+	from e621.files
+);
+
+create table if not exists e621.downloads (
+	post_id int not null,
+	status char(4),
+	--
+	constraint downloads_pk primary key (post_id)
+);

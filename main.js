@@ -65,6 +65,9 @@ const opts = {
 				starting = parseInt(starting, 10) || 1
 				return require('./sites/e621/e621.js').tags(starting);
 			}
+		},
+		images: {
+			download: require('./sites/e621/e621.js').download_images
 		}
 	},
 	furry_network: {

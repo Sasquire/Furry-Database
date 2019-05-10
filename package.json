@@ -11,6 +11,7 @@
   "dependencies": {
     "e621_api": "file:../e621_api",
     "minimist": "^1.2.0",
+    "neo-async": "^2.6.0",
     "pg": "^7.9.0",
     "request": "^2.88.0",
     "stream-json": "^1.2.1"

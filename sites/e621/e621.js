@@ -1,4 +1,5 @@
 const utils = require('./../../utils.js');
+//const async = require('async');
 const db = utils.db
 const sql = utils.sql.e621;
 const e621 = utils.e621_api;
@@ -185,10 +186,31 @@ async function insert_tags(tag_array){
 	return tags.slice(-1)[0].tag_id;
 }
 
+async function download_images(){
+	const to_download = await db.query(sql.undownloaded_images)
+	const args = to_download.rows.map(e => ({
+		post_id: e.post_id,
+		url: e.url,
+		file_ext: e.url.split('.').reverse()[0]
+	}));
+
+	async function do_update(post, done){
+		const msg = await utils.save_image(post.url, post.ext)
+			.then(e => 'good')
+			.catch(e => e.toString());
+		console.log(msg)
+		await db.query(sql.update_image, [post.post_id, msg])
+		done();
+	}
+
+	return utils.save_all_images(args, do_update)
+}
+
 module.exports = {
 	post: add_post,
 	daily: daily_post_adding,
 	large: large_post_adding,
 	tags: update_tags,
-	insert_posts: insert_posts
+	insert_posts: insert_posts,
+	download_images: download_images
 }

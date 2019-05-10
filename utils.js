@@ -6,6 +6,10 @@ const db = new Pool(options.postgres_info);
 const raw_request = require('request');
 const { URL } = require('url');
 const crypto = require('crypto');
+const Queue = require('promise-queue');
+const queue = new Queue(options.image_concurrency, Infinity);
+//const limit = require('promise-limit')(options.image)
+const async = require('neo-async')
 
 function md5_f(data){
 	return crypto
@@ -101,6 +105,7 @@ async function save_image(url, ext){
 		encoding: null
 	}
 	const blob = await request(opts);
+	console.log(url.href)
 	const md5 = md5_f(blob)
 	const file = `${md5.slice(0, 2)}/${md5.slice(2, 4)}/${md5}.${ext}`
 	const full_path = options.image_path + file;
@@ -114,6 +119,12 @@ async function save_image(url, ext){
 	}
 }
 
+async function download_image_limited(args, iterator){
+	return new Promise((resolve, reject) => {
+		async.eachLimit(args, options.image_concurrency, iterator, resolve)
+	})
+}
+
 module.exports = {
 	sql: make_all_sql(options.sites),
 	db: db,
@@ -122,6 +133,7 @@ module.exports = {
 	request: request_json,
 	raw_request: raw_request,
 	save_image: save_image,
+	save_all_images: download_image_limited,
 	save_json: save_json,
 	make_folder: make_folder,
 	make_folders: make_folders,

@@ -1,3 +1,1 @@
-select post_id, url
-from e621.downloads full join e621.urls using (post_id)
-where status is null;
+select * from e621.urls where status is null;

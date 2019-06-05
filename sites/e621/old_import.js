@@ -15,32 +15,41 @@ select row_to_json(<table>) from <table>;
 
 // https://stackoverflow.com/questions/42896447/parse-large-json-file-in-nodejs-and-handle-each-object-independently
 const utils = require('./../../utils.js');
-const db = utils.db
 const StreamArray = require('stream-json/streamers/StreamArray');
 const fs = require('fs');
 const jsonStream = StreamArray.withParser();
+const query = utils.query;
 
 const insert_sql = utils.sql.e621.insert_files;
 const filename = '';
 
+function old_to_new_file(p){
+	return {
+		post_id: p.post_id,
+		file_type: p.file_ext,
+		given_md5: p.md5,
+		actual_md5: p.md5, // Fix post 815298 by hand
+		status: null
+	};
+}
+
 let data = [];
 jsonStream.on('data', async ({key, value}) => {
 	if(data.length < 1000){
-		data.push(JSON.parse(value.row_to_json))
+		data.push(JSON.parse(value.row_to_json));
 	}
 	if(data.length == 1000) {
-		db.query(insert_sql, [JSON.stringify(data)])
+		query(insert_sql, data.map(old_to_new_file))
 			.then(() => console.log(`Imported ${key} entries`))
-			.catch(console.log)
-		data = []
+			.catch(console.log);
+		data = [];
 	}
 });
 
 jsonStream.on('end', () => {
-	db.query(insert_sql, [JSON.stringify(data)])
-		.then(() => db.end())
+	query(insert_sql, data.map(old_to_new_file))
 		.then(() => console.log('All done'))
-		.catch(console.log)
+		.catch(console.log);
 });
 
 fs.createReadStream(filename).pipe(jsonStream.input);

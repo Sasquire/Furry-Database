@@ -88,11 +88,14 @@ create table if not exists e621.posts (
 
 create table if not exists e621.files (
 	post_id   int not null,
-	md5       char(32) not null,
-	file_ext  e621.file_type not null,
+	given_md5 char(32) not null,
+	file_type e621.file_type not null,
+	--
+	status     char(4),
+	actual_md5 char(32),
 	--
 	constraint files_pk        primary key (post_id),
-	constraint files_un_md5    unique (md5),
+	constraint files_un_md5    unique (given_md5),
 	constraint files_posts_fk  foreign key (post_id) references e621.posts(post_id)
 );
 
@@ -116,22 +119,17 @@ create table if not exists e621.tags (
 create or replace view e621.urls as (
 	select 
 		post_id,
+		status,
+		file_type,
 		concat(
 			'https://static1.e621.net/data/',
-			substring(md5, 1, 2),
+			substring(given_md5, 1, 2),
 			'/',
-			substring(md5, 3, 2),
+			substring(given_md5, 3, 2),
 			'/',
-			md5,
+			given_md5,
 			'.',
-			file_ext
+			file_type
 		) as url
 	from e621.files
-);
-
-create table if not exists e621.downloads (
-	post_id int not null,
-	status char(4),
-	--
-	constraint downloads_pk primary key (post_id)
 );

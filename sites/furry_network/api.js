@@ -1,32 +1,44 @@
-const opts = require('./../../options.json').furry_network;
-const utils = require('./../../utils.js')
-const { request } = require('./../../utils.js');
+const utils = require('./../../utils.js');
+const updated_at = require('./convert.js').updated_at;
+const logger = utils.logger('FNauth');
+const settings = utils.options.furry_network;
 let login_response = {};
 
-async function download_page(type, page_num){
+async function download_page(type, page_num, tries = 0){
 	const before = page_num * 72;
 	const options = {
-		url:`https://furrynetwork.com/api/search/${type}?size=72&&from=${before}`,
+		url: `https://furrynetwork.com/api/search/${type}?size=72&&from=${before}`,
 		headers: {
-			'authorization': 'Bearer '+ login_response.access_token,
-			'user-agent': opts.user_agent
+			authorization: `Bearer ${login_response.access_token}`,
+			'user-agent': settings.user_agent
+		}
+	};
+
+	try {
+		const [data, _] = await Promise.all([
+			utils.request(options),
+			new Promise(resolve => setTimeout(resolve, settings.page_delay))
+		]);
+		return data;
+	} catch(e) {
+		if(e != 401){
+			const err = `Page ${page_num} of ${type} -- errors\n${e}`;
+			logger.error(err);
+			throw new Error(err);
+		} else if(tries >= 3){
+			const err = `Page ${page_num} of ${type} too many retries`;
+			logger.error(err);
+			throw new Error(err);
+		} else {
+			logger.log('Attempting to refresh');
+			await oauth('refresh');
+			return download_page(type, page_num, tries + 1);
 		}
 	}
-	return Promise.all([
-		request(options),
-		new Promise(r => setTimeout(r, opts.wait_time))
-	])
-	.then(e => e[0])
-	.catch(async e => {
-		if(e != 401){ throw `Page ${type}--${page_num}-- errors !-- ${e} --!`; }
-		console.log('Attempting to refresh')
-		return oauth('refresh')
-			.then(() => download_page(type, page_num));
-	});
 }
 
 function oauth(oauth_method){
-	// this is really ugly, but it is the cleanest I have found
+	// This is really ugly, but it is the cleanest I have found
 	// i did not want three methods that looked almost the same
 	// please make this good
 	const methods = {
@@ -35,14 +47,14 @@ function oauth(oauth_method){
 			url: 'https://furrynetwork.com/api/oauth/token',
 			headers: {
 				'content-type': 'application/x-www-form-urlencoded',
-				'user-agent': opts.user_agent
+				'user-agent': settings.user_agent
 			},
 			formData: {
-				username: opts.username,
-				password: opts.password,
+				username: settings.username,
+				password: settings.password,
 				grant_type: 'password',
 				client_id: '123',
-				client_secret: opts.client_secret
+				client_secret: ''
 			}
 		},
 		logout: {
@@ -50,7 +62,7 @@ function oauth(oauth_method){
 			url: 'https://furrynetwork.com/api/oauth/logout',
 			headers: {
 				'content-type': 'application/x-www-form-urlencoded',
-				'user-agent': opts.user_agent,
+				'user-agent': settings.user_agent,
 				authorization: `Bearer ${login_response.access_token}`
 			},
 			form: `{"refresh_token":"${login_response.refresh_token}"}`
@@ -60,7 +72,7 @@ function oauth(oauth_method){
 			url: 'https://furrynetwork.com/api/oauth/token',
 			headers: {
 				'content-type': 'application/x-www-form-urlencoded',
-				'user-agent': opts.user_agent,
+				'user-agent': settings.user_agent,
 				authorization: `Bearer ${login_response.access_token}`
 			},
 			formData: {
@@ -69,33 +81,55 @@ function oauth(oauth_method){
 				refresh_token: login_response.refresh_token
 			}
 		}
-	}
+	};
 
-	console.log(`oauth ${oauth_method}ing`);
-	return request(methods[oauth_method]).then(e => {
-		if(oauth_method != 'login'){ return; }
-		login_response = e
-	}).catch(e => {
-		throw `Error with ${oauth_method}ing !-- ${e} --!`;
-	})
+	logger.log(`${oauth_method}-ing`);
+	const options = methods[oauth_method] || methods.login;
+
+	return utils.request(options)
+		.then(e => (login_response = e))
+		.catch(e => {
+			const err = `${oauth_method}ing !-- ${e} --!`;
+			logger.error(err);
+			throw new Error(err);
+		});/* A
+		if(oauth_method == 'logout' || oauth_method == 'refresh'){
+
+		}
+		if(oauth_method != 'login'){
+			return;
+		} else {
+
+		}
+		*/
+
 }
 
-async function download_until_id(type, max_db_date, callback){
+async function download_until_date(type, given_date, callback){
 	try {
+		let min_date = new Date(new Date().getTime() + 1e12); // Large date
 		await oauth('login');
-		let min_date = new Date(new Date().getTime() + 1e12);
-		for(let page = 0; max_db_date < min_date; page++){
-			console.log(`Downloading page ${page}`)
-			const data = await download_page(type, page)
-			utils.save_json('furry_network', type, data)
+
+		for(let page = 0; given_date < min_date; page++){
+			logger.log(`Downloading page ${page}`);
+			const data = await download_page(type, page);
+
+			utils.save.json('furry_network', type, data);
+
 			min_date = get_min_date(data);
-			console.log(min_date)
+			logger.log(`New min date is ${min_date}`);
+
 			callback(data);
 		}
 	} catch(e){
-		console.log(e)
+		logger.error(e);
+		throw new Error(e);
 	} finally {
-		await oauth('logout').catch(console.log)
+		await oauth('logout')
+			.catch(e => {
+				logger.error(e);
+				throw new Error(e);
+			});
 	}
 }
 
@@ -105,18 +139,7 @@ function get_min_date(json){
 		.concat(json.after)
 		.map(updated_at)
 		.sort((a, b) => a - b)
-		.slice(0, 1)[0] || new Date(0)
+		.slice(0, 1)[0] || new Date(0);
 }
 
-function updated_at(post){
-	return new Date(Math.max.apply(Math, [
-		new Date(post._source.created),
-		new Date(post._source.updated || 0),
-		new Date(post._source.published || 0),
-		new Date(post._source.made_public_date || 0)
-	]));
-}
-
-module.exports = {
-	download: download_until_id
-}
+module.exports = download_until_date;

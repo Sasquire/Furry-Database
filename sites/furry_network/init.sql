@@ -86,9 +86,12 @@ create table if not exists fn.files (
 	post_type  fn.post_type not null,
 	post_id    int not null,
 	--
-	md5        char(32) not null,
+	given_md5  char(32) not null,
 	file_type  fn.file_type not null,
 	url        text, -- a text file doesnt have a url
+	--
+	status     char(4),
+	actual_md5 char(32),
 	--
 	constraint files_pkey    primary key (post_type, post_id),
 	constraint files_fk      foreign key (post_id, post_type) references fn.posts (post_id, post_type)--,

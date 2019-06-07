@@ -1,15 +1,8 @@
 {
-	"image_path":"/absolute/path/to/images/",
-	"json_path":"/absolute/path/to/json/",
-	"save_json": true,
-	"e621_user_agent": "Here is a test user Agent",
-	"furry_network": {
-		"user_agent": "Here is a test user Agent",
-		"username": "username@mail.com",
-		"password": "password123",
-		"client_secret": "",
-		"wait_time": 3000
-	},
+	"image_path": "/absolute/path/to/images",
+	"collision": "~name_of_collision_folder",
+	"json_path": "/absolute/path/to/json",
+
 	"postgres_info": {
 		"host": "localhost",
 		"database": "furry",
@@ -18,8 +11,25 @@
 		"password": "",
 		"multipleStatements": true
 	},
-	"sql": [
-		"e621",
-		"furry_network"
-	]
+
+	"sites": {
+		"e621": {
+			"user_agent": "Something nice",
+			"file_concurrency": 5,
+			"page_delay": 750,
+
+			"save_json": true
+		},
+
+		"furry_network": {
+			"user_agent": "Something nice",
+			"username": "user@example.org",
+			"password": "password123",
+			"file_concurrency": 1,
+			"page_delay": 3000,
+
+			"save_json": true,
+			"save_stories": true
+		}
+	}
 }

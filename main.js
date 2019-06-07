@@ -1,7 +1,7 @@
 /* eslint-disable global-require */
 const args = require('minimist')(process.argv.slice(2));
-const utils = require('./utils.js');
-const query = utils.query;
+const utils = require('./utils/utils.js');
+const query = utils.db.query;
 const sql = utils.sql;
 const logger = utils.logger('start');
 utils.logger_level(args.debug);
@@ -52,7 +52,7 @@ async function run(){
 		logger.d_error('Something went wrong');
 		logger.error(e);
 	} finally {
-		await utils.close();
+		await utils.db.close();
 		logger.d_log('Closing ');
 		console.log(); // Log an actual newline
 	}

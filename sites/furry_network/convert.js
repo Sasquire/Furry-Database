@@ -1,7 +1,7 @@
 /* eslint-disable no-underscore-dangle */
 // Furrynetwork has a lot of underscore dangle
 
-const utils = require('./../../utils.js');
+const utils = require('./../../utils/utils.js');
 const md5 = utils.md5;
 
 function updated_at(post){
@@ -70,7 +70,8 @@ function find_md5(post){
 	} else if(post._type == 'story'){
 		return md5(post._source.content);
 	} else {
-		return '0123456789abcdef0123456789abcdef';
+		// Some md5's can be null because not supplied by API
+		return null;
 	}
 }
 

@@ -1,76 +1,15 @@
-/* eslint-disable global-require */
-const fs = require('fs');
 const path = require('path');
+const raw_request = require('request');
 const crypto = require('crypto');
+const async = require('neo-async');
+const fs = require('fs');
 const { promisify } = require('util');
 const fsp = {
 	writeFile: promisify(fs.writeFile),
 	readFile: promisify(fs.readFile)
 };
-const raw_request = require('request');
-const async = require('neo-async');
-const options = require('./options.json');
-const { Pool } = require('pg');
-const db = new Pool(options.postgres_info);
-// Logger for this file is defined just below logger_utils
-
-// The only two things that should be used from here are
-// set to set the debug level (this is only used in the start) and
-// create to create labeled loggers.
-// Everything else will be from the functions given by `create`
-const logger_utils = {
-	// Lower level means more is printed
-	level: 20,
-	levels: {
-		all: 40,
-		debug: 30,
-		info: 20,
-		error: 10
-	},
-
-	// Key to identify this instance of the program
-	key: Buffer.from(md5_f(new Date().toString()))
-		.toString('base64')
-		.substring(0, 4),
-
-	set: (name) => (logger_utils.level = logger_utils.levels[name] || 20),
-	get: (name) => logger_utils.levels[name] || 0,
-	print: (string, level) => {
-		// If current level is greater than target level
-		if(logger_utils.level >= logger_utils.get(level)){
-			console.log(string);
-		}
-	},
-
-	create: (title) => ({
-		error: logger_utils.make('error', title, false),
-		log: logger_utils.make('info', title, false),
-		debug: logger_utils.make('debug', title, false),
-		all: logger_utils.make('all', title, false),
-		d_error: logger_utils.make('error', title, true),
-		d_log: logger_utils.make('info', title, true),
-		d_debug: logger_utils.make('debug', title, true),
-		d_all: logger_utils.make('all', title, false)
-	}),
-
-	make: (level, title, should_date) => {
-		const key = logger_utils.key;
-		const format = (str) => `${key}-${level}:\t${title}:\t${str}`;
-		const add_date = (str) => `${str}\t${new Date().toISOString()}`;
-
-		const this_logger = (text = '') => {
-			const string = (text.stack || text.toString() || '')
-				.split('\n')
-				.map(e => format(e))
-				.map(e => (should_date ? add_date(e) : e))
-				.join('\n');
-			logger_utils.print(string, level);
-		};
-
-		return this_logger;
-	}
-};
-const logger = logger_utils.create('utils');
+const options = require('../options.json');
+const logger = require('./logger.js').logger('FileU');
 
 // Preforms md5 on some data
 // md5_f to mean md5_file
@@ -80,32 +19,6 @@ function md5_f(data){
 		.update(data)
 		.digest("hex")
 		.toString();
-}
-
-// Reads all sql files from each site
-// {
-//   "site_name": {
-//     "file_name": // data
-//     "file_name": // data
-//   }, // more sites
-// }
-function make_all_sql(sites){
-	const sql_obj = {};
-	sites.forEach(site => {
-		sql_obj[site] = {};
-
-		// Path to sql scripts for this site
-		const folder = path.join(__dirname, 'sites', site);
-		fs.readdirSync(folder)
-			.map(e => path.join(folder, e))
-			.filter(e => path.extname(e) == '.sql')
-			.map(e => ({
-				name: path.basename(e).slice(0, -4), // Remove extension
-				data: fs.readFileSync(e, 'utf8')
-			}))
-			.forEach(e => (sql_obj[site][e.name] = e.data));
-	});
-	return sql_obj;
 }
 
 async function request(request_options){
@@ -246,35 +159,6 @@ function make_file_folder(top, bottom){
 	make_folder(path.join(options.image_path, top, bottom));
 }
 
-function percent_counter(index, max, steps){
-	const hit = new Array(steps)
-		.fill(0)
-		.map((e, i) => Math.round((i / steps) * max))
-		.find(e => e == index);
-
-	if(hit == undefined){ return; }
-	logger.log(`Working, ${((index / max) * 100).toFixed(2)}% done`);
-}
-
-async function insert_files(directory, insert_func){
-	const inserts = fs.readdirSync(directory);
-
-	let i = 0; // Index counter
-	for(const file_name of inserts){
-		const file_path = path.join(directory, file_name);
-
-		logger.debug(`Reading ${file_name}`);
-		const text = await fsp.readFile(file_path);
-		const data = JSON.parse(text);
-
-		logger.debug(`Inserting ${file_name}`);
-		await insert_func(data);
-
-		i++;
-		percent_counter(i, inserts.length, 100);
-	}
-}
-
 async function download_image_limited(args, site, iterator){
 	const limit = (() => {
 		const site_obj = options.sites[site];
@@ -299,41 +183,7 @@ function test_file(md5, ext){
 	return fs.existsSync(file_path);
 }
 
-// Used like nice_query(sql.script, $1, $2, $3, $4);
-async function nice_query(script, ...fills){
-	return db.query(script, fills.map(e => JSON.stringify(e)))
-		.then(e => e.rows);
-		// No catch, because we let other functions do that
-}
-
-// Used for when you dont want to stringify
-async function nice_query_raw(script, ...fills){
-	return db.query(script, fills)
-		.then(e => e.rows);
-		// No catch, because we let other functions do that
-}
-
 module.exports = {
-	sql: make_all_sql(Object.keys(options.sites)),
-	query: nice_query,
-	query_raw: nice_query_raw,
-	close: () => db.end(),
-	insert_files: insert_files,
-	counter: percent_counter,
-
-	apis: {
-		e621: (() => {
-			const api_gen = require('e621_api');
-			const user_agent = options.sites.e621.user_agent;
-			const delay = options.sites.e621.page_delay;
-			return new api_gen(user_agent, delay);
-		})()
-
-		// Disabled because it requires this file
-		// before this file is finished
-		// furry_network: require('./sites/furry_network/api.js')
-	},
-
 	request: request_json,
 	raw_request: raw_request,
 	save: {
@@ -344,14 +194,10 @@ module.exports = {
 		test: test_file
 	},
 
-	logger: logger_utils.create,
-	logger_level: logger_utils.set,
-
 	folders: {
 		make: make_folder,
 		make_files: make_image_folders
 	},
 
-	md5: md5_f,
-	options: options.sites
+	md5: md5_f
 };

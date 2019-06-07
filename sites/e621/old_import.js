@@ -14,23 +14,28 @@ select row_to_json(<table>) from <table>;
 */
 
 // https://stackoverflow.com/questions/42896447/parse-large-json-file-in-nodejs-and-handle-each-object-independently
-const utils = require('./../../utils.js');
+const utils = require('./../../utils/utils.js');
 const StreamArray = require('stream-json/streamers/StreamArray');
 const fs = require('fs');
 const jsonStream = StreamArray.withParser();
-const query = utils.query;
+const query = utils.db.query;
 
-const insert_sql = utils.sql.e621.insert_files;
-const filename = '';
+let insert_sql = null;
+const filename = process.argv.slice(2)[0];
+const type = process.argv.slice(2)[1];
 
 function old_to_new_file(p){
-	return {
-		post_id: p.post_id,
-		file_type: p.file_ext,
-		given_md5: p.md5,
-		actual_md5: p.md5, // Fix post 815298 by hand
-		status: null
-	};
+	if(type == 'files'){
+		return {
+			post_id: p.post_id,
+			file_type: p.file_ext,
+			given_md5: p.md5,
+			actual_md5: p.md5, // Fix post 815298 by hand
+			status: null
+		};
+	} else {
+		return p;
+	}
 }
 
 let data = [];
@@ -52,4 +57,13 @@ jsonStream.on('end', () => {
 		.catch(console.log);
 });
 
-fs.createReadStream(filename).pipe(jsonStream.input);
+if(filename == undefined || filename == ''){
+	console.log('No filename found on first argument');
+} else if(['post', 'files'].includes(type) == false){
+	console.log('No correct type on second argument');
+} else {
+	const sql_type = type == 'files' ? 'insert_files' : 'insert_posts';
+	insert_sql = utils.sql.e621[sql_type];
+
+	fs.createReadStream(filename).pipe(jsonStream.input);
+}

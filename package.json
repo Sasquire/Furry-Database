@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "e621_api": "file:../e621_api",
+    "get-pixels": "^3.3.2",
     "minimist": "^1.2.0",
     "neo-async": "^2.6.0",
     "pg": "^7.9.0",

@@ -86,7 +86,10 @@ create table if not exists fn.files (
 	post_type  fn.post_type not null,
 	post_id    int not null,
 	--
-	given_md5  char(32) not null,
+	given_md5  char(32), -- allow this to be null because some images
+	-- do not have a md5 when given from the API
+	-- this seems odd, but I haven't been able to get a reason
+	-- artwork 1421568
 	file_type  fn.file_type not null,
 	url        text, -- a text file doesnt have a url
 	--

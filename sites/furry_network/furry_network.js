@@ -3,9 +3,9 @@
 
 const download = require('./api.js');
 const convert = require('./convert.js');
-const utils = require('./../../utils.js');
-const query = utils.query;
-const query_raw = utils.query_raw;
+const utils = require('./../../utils/utils.js');
+const query = utils.db.query;
+const query_raw = utils.db.query_raw;
 const sql = utils.sql.furry_network;
 const logger = utils.logger('FurryN');
 
@@ -79,7 +79,7 @@ async function download_images(){
 		done(); // This is the format that neo-async uses
 	}
 
-	return utils.save.multiple(images, 'furry_network', single_post);
+	await utils.save.multiple(images, 'furry_network', single_post);
 }
 
 module.exports = {

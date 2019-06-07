@@ -1,7 +1,7 @@
-const utils = require('./../../utils.js');
+const utils = require('./../../utils/utils.js');
 const convert = require('./convert.js');
-const query = utils.query;
-const query_raw = utils.query_raw;
+const query = utils.db.query;
+const query_raw = utils.db.query_raw;
 const sql = utils.sql.e621;
 const e621 = utils.apis.e621;
 const save_json = utils.save.json;
@@ -40,7 +40,7 @@ async function insert_posts(post_array){
 	);
 }
 
-async function daily_post_adding(time_shift = 0){
+async function daily_post_adding(time_shift){
 	await regular_update();
 	// C console.log('### Checking the next half ###');
 	// Todo flagged_check();
@@ -120,7 +120,6 @@ async function daily_post_adding(time_shift = 0){
 }
 
 async function large_post_adding(lowest_id_known){
-	lowest_id_known = lowest_id_known || 1e9; // 1 billion
 	while(true){ // Will force break;
 		logger.log(`Checking posts below id:${lowest_id_known}`);
 
@@ -136,7 +135,6 @@ async function large_post_adding(lowest_id_known){
 // Todo a method for specific tags?
 // or even a daily tag update
 async function update_tags(max_known_id){
-	max_known_id = max_known_id || await max_tag() || 1;
 	while(true){
 		logger.log(`Downloading tags above tag_id ${max_known_id}`);
 		const raw_tags = await e621.tag_list({
@@ -145,12 +143,9 @@ async function update_tags(max_known_id){
 			after_id: max_known_id
 		});
 		save_json('e621', 'tags', raw_tags);
+
 		if(raw_tags.length == 0){ return; }
 		max_known_id = await insert_tags(raw_tags);
-	}
-
-	function max_tag(){
-		return query(sql.max_tag).then(e => (e[0] ? e[0].max : 0));
 	}
 }
 
@@ -186,14 +181,14 @@ async function restore_images(){
 			post_id: e.post_id
 		})));
 
+	logger.debug('Obtained all file info');
 	let i = 0;
 	for(const file of files){
 		if(utils.save.test(file.md5, file.ext)){
 			await query_raw(sql.update_image, file.post_id, 'good', file.md5);
 		}
 
-		i++;
-		utils.counter(i, files.length, 100);
+		utils.counter(++i, files.length, 1000);
 	}
 }
 
@@ -207,7 +202,7 @@ module.exports = {
 		await daily_post_adding(time_shift);
 	},
 	post_large: async ($1) => {
-		const starting_id = parseInt($1, 10) || 1e9;
+		const starting_id = parseInt($1, 10) || 1e9; // 1 billion is big
 		logger.debug(`Large update starting at ${starting_id}`);
 		await large_post_adding(starting_id);
 	},
@@ -221,8 +216,12 @@ module.exports = {
 		await Promise.all(post_updates);
 	},
 	tags: async ($1) => {
-		const starting_id = parseInt($1, 10);
+		const starting_id = parseInt($1, 10) || await max_tag();
 		await update_tags(starting_id);
+
+		async function max_tag(){
+			return query(sql.max_tag).then(e => (e[0] ? e[0].max : 1));
+		}
 	},
 	images: async () => {
 		logger.debug('Going to download images');

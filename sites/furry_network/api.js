@@ -1,4 +1,4 @@
-const utils = require('./../../utils.js');
+const utils = require('./../../utils/utils.js');
 const updated_at = require('./convert.js').updated_at;
 const logger = utils.logger('FNauth');
 const settings = utils.options.furry_network;

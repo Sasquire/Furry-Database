@@ -91,7 +91,7 @@ module.exports = {
 			logger.error('You must supply a directory');
 		} else {
 			logger.log('Inserting all json files from directory to db');
-			await utils.insert_files($1, insert_posts);
+			await utils.db.insert_files($1, insert_posts);
 		}
 	},
 	update: async ($1) => {

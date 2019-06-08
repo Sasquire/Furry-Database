@@ -2,6 +2,7 @@ const path = require('path');
 const raw_request = require('request');
 const crypto = require('crypto');
 const async = require('neo-async');
+const get_pixels = require('get-pixels');
 const fs = require('fs');
 const { promisify } = require('util');
 const fsp = {
@@ -91,6 +92,27 @@ async function save_data(data, ext){
 	return md5;
 }
 
+async function image_data_hash(data, ext){
+	const acceptable = ['jpg', 'png', 'gif'];
+
+	return new Promise((resolve, reject) => {
+		if(acceptable.includes(ext) == false || options.save_dhash == false){
+			resolve(null);
+			return;
+		}
+
+		logger.all('Getting d_hash of image');
+		get_pixels(data, `image/${ext}`, (err, pixels) => {
+			if(err){
+				logger.error(err);
+				resolve(null);
+			} else {
+				resolve(md5_f(Buffer.from(pixels.data)));
+			}
+		});
+	});
+}
+
 async function save_url(url, ext){
 	logger.all(`Going to save a "${ext}" from ${url}`);
 	try {
@@ -125,6 +147,15 @@ async function write_data(folder, file_name, data){
 		await fsp.writeFile(file_path, data, 'binary');
 		return false;
 	}
+}
+
+async function read_file(md5, ext){
+	const top = md5.slice(0, 2);
+	const bottom = md5.slice(2, 4);
+	const folder = path.join(options.image_path, top, bottom);
+	const file_name = `${md5}.${ext}`;
+	const file_path = path.join(folder, file_name);
+	return fsp.readFile(file_path);
 }
 
 function make_image_folders(){

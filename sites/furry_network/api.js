@@ -119,7 +119,7 @@ async function download_until_date(type, given_date, callback){
 			min_date = get_min_date(data);
 			logger.log(`New min date is ${min_date}`);
 
-			callback(data);
+			await callback(data); // Wait for the callback to finish
 		}
 	} catch(e){
 		logger.error(e);

@@ -22,7 +22,7 @@ async function update(type){
 	const max_date = new Date(max[0] ? max[0].max : 0);
 
 	logger.log(`Updating ${type}, the max date is ${max_date}`);
-	await download(type, max, insert_posts);
+	await download(type, max_date, insert_posts);
 }
 
 async function download_all(type){
@@ -102,6 +102,7 @@ module.exports = {
 			await update($1);
 		}
 	},
+	// Todo have $2 to start at a specific page
 	download: async ($1) => {
 		const good = types.includes($1);
 		if(good == false){

@@ -1,1 +1,0 @@
-select max(tag_id) from e621.tags;

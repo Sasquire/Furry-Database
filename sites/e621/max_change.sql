@@ -1,1 +1,1 @@
-select max(change_id) from e621.posts;
+select max(change_seq) from e621.change_history;

@@ -1,9 +1,6 @@
-function fix_date(created_at){
-	return new Date((created_at.s * 1000) + (created_at.n / 1000000000));
-}
-
-function rating(char){
-	switch (char){
+/* eslint-disable no-unneeded-ternary */
+function rating (char) {
+	switch (char) {
 		case 'e': return 'explicit';
 		case 'q': return 'questionable';
 		case 's': return 'safe';
@@ -11,8 +8,8 @@ function rating(char){
 	}
 }
 
-function tag_type(type){
-	switch (type){
+function tag_type (type) {
+	switch (type) {
 		case 0: return 'general';
 		case 1: return 'artist';
 		case 3: return 'copyright';
@@ -24,36 +21,48 @@ function tag_type(type){
 
 module.exports = {
 	file: (e) => ({
-		post_id: e.id,
-		given_md5: e.md5,
-		file_type: e.file_ext,
-
+		given_md5: e.file.md5,
+		file_type: e.file.ext,
 		actual_md5: null,
 		status: null
 	}),
 
-	post: (e) => ({
-		post_id: e.id,
-		change_id: e.change,
-		status: e.status,
-		flag_message: e.delreason || '',
-		created_at: fix_date(e.created_at),
-		creator_id: e.creator_id || 0,
+	change_history: (e) => ({
+		change_seq: e.change_seq,
+		created_at: new Date(e.created_at),
+		updated_at: new Date(e.updated_at),
+		is_pending: e.flags.pending ? true : false,
+		is_flagged: e.flags.flagged ? true : false,
+		is_deleted: e.flags.deleted ? true : false,
+		approver_id: e.approver_id,
 
 		rating: rating(e.rating),
-		tags: (e.tags || '').split(' '),
-		locked_tags: (e.locked_tags || '').split(' '),
+		tags: Object.values(e.tags || ({ a: [] })).reduce((acc, e) => acc.concat(e)),
 		sources: e.sources || [],
-		description: e.description,
+		description: e.description || '',
 
-		// Post #945332 has 0 width and height
+		locked_tags: e.locked_tags || [],
+		status_locked: e.flags.status_locked ? true : false,
+		rating_locked: e.flags.rating_locked ? true : false,
+		note_locked: e.flags.note_locked ? true : false,
+
 		file_size: e.file_size || 0,
 		width: e.width || 0,
 		height: e.height || 0,
 
 		fav_count: e.fav_count || 0,
-		score: e.score || 0,
+		score_up: e.score.up || 0,
+		score_down: e.score.down || 0,
+		comment_count: e.comment_count || 0,
+
+		given_md5: e.file.md5,
+
 		parent_id: e.parent_id
+	}),
+
+	post_change: (e) => ({
+		post_id: e.id,
+		change_seq: e.change_seq
 	}),
 
 	tag: (e) => ({

@@ -1,12 +1,4 @@
-const crypto = require('crypto');
-
-function md5_f(data){
-	return crypto
-		.createHash('md5')
-		.update(data)
-		.digest("hex")
-		.toString();
-}
+const md5_f = require('./md5.js');
 
 // The only two things that should be used from here are
 // set to set the debug level (this is only used in the start) and
@@ -31,7 +23,7 @@ const logger_utils = {
 	get: (name) => logger_utils.levels[name] || 0,
 	print: (string, level) => {
 		// If current level is greater than target level
-		if(logger_utils.level >= logger_utils.get(level)){
+		if (logger_utils.level >= logger_utils.get(level)) {
 			console.log(string);
 		}
 	},
@@ -49,14 +41,17 @@ const logger_utils = {
 
 	make: (level, title, should_date) => {
 		const key = logger_utils.key;
-		const format = (str) => `${key}-${level}:\t${title}:\t${str}`;
-		const add_date = (str) => `${str}\t${new Date().toISOString()}`;
+		const format = (str, should_date) => {
+			const front = `${key}-${level}:\t${title}\t`;
+			const date = `${new Date().toISOString()}\t`;
+			const end = str;
+			return front + (should_date ? date : '') + end;
+		};
 
 		const this_logger = (text = '') => {
 			const string = (text.stack || text.toString() || '')
 				.split('\n')
-				.map(e => format(e))
-				.map(e => (should_date ? add_date(e) : e))
+				.map(e => format(e, should_date))
 				.join('\n');
 			logger_utils.print(string, level);
 		};

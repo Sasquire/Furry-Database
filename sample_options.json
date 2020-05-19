@@ -15,6 +15,8 @@
 	"sites": {
 		"e621": {
 			"user_agent": "Something nice",
+			"username" : "username",
+			"api_key": "apikey",
 			"file_concurrency": 5,
 			"page_delay": 750,
 

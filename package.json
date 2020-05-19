@@ -1,20 +1,57 @@
 {
-  "name": "e621_database",
-  "version": "1.0.0",
-  "description": "",
-  "main": "api.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "e621_api": "file:../e621_api",
-    "get-pixels": "^3.3.2",
-    "minimist": "^1.2.0",
-    "neo-async": "^2.6.0",
-    "pg": "^7.9.0",
-    "request": "^2.88.0",
-    "stream-json": "^1.2.1"
-  }
+	"name": "e621_database",
+	"version": "1.0.0",
+	"description": "",
+	"main": "api.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"axios": "^0.19.2",
+		"eslint": "^6.8.0",
+		"eslint-config-standard": "^14.1.0",
+		"eslint-plugin-import": "^2.20.1",
+		"eslint-plugin-node": "^11.0.0",
+		"eslint-plugin-promise": "^4.2.1",
+		"eslint-plugin-standard": "^4.0.1",
+		"get-pixels": "^3.3.2",
+		"minimist": "^1.2.0",
+		"neo-async": "^2.6.0",
+		"pg": "^8.2.0",
+		"request": "^2.88.0",
+		"stream-json": "^1.2.1"
+	},
+	"eslintConfig": {
+		"extends": "standard",
+		"parserOptions": {
+			"ecmaVersion": 11,
+			"sourceType": "module"
+		},
+		"env": {
+			"browser": true,
+			"node": true,
+			"es6": true,
+			"mocha": true
+		},
+		"rules": {
+			"semi": [
+				"error",
+				"always"
+			],
+			"no-console": "off",
+			"indent": [
+				"error",
+				"tab",
+				{
+					"SwitchCase": 1
+				}
+			],
+			"no-tabs": "off",
+			"camelcase": "off",
+			"generator-star-spacing": "off",
+			"yield-star-spacing": "off"
+		}
+	}
 }

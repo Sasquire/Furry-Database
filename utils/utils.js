@@ -1,17 +1,14 @@
 /* eslint-disable global-require */
 const fs = require('fs');
-const { promisify } = require('util');
-const fsp = {
-	writeFile: promisify(fs.writeFile),
-	readFile: promisify(fs.readFile)
-};
 const path = require('path');
 const options = require('./../options.json');
 const { Pool } = require('pg');
 const db = new Pool(options.postgres_info);
+db.on('error', () => false);
 const logger_obj = require('./logger.js');
 const logger = logger_obj.logger('utils');
 const files = require('./files.js');
+const e621_api_path = './../../E621-Api/distribution/e621_API.node.js';
 
 // Reads all sql files from each site
 // {
@@ -20,7 +17,7 @@ const files = require('./files.js');
 //     "file_name": // data
 //   }, // more sites
 // }
-function make_all_sql(sites){
+function make_all_sql (sites) {
 	const sql_obj = {};
 	sites.forEach(site => {
 		sql_obj[site] = {};
@@ -29,7 +26,7 @@ function make_all_sql(sites){
 		const folder = path.join(path.dirname(__dirname), 'sites', site);
 		fs.readdirSync(folder)
 			.map(e => path.join(folder, e))
-			.filter(e => path.extname(e) == '.sql')
+			.filter(e => path.extname(e) === '.sql')
 			.map(e => ({
 				name: path.basename(e).slice(0, -4), // Remove extension
 				data: fs.readFileSync(e, 'utf8')
@@ -39,52 +36,62 @@ function make_all_sql(sites){
 	return sql_obj;
 }
 
-function percent_counter(index, max, steps){
-	const hit = new Array(steps)
+function * make_percent_counter (max, steps) {
+	const hits = new Array(steps)
 		.fill(0)
-		.map((e, i) => Math.round((i / steps) * max))
-		.find(e => e == index);
-
-	if(hit == undefined){ return; }
-	logger.log(`Working, ${((index / max) * 100).toFixed(2)}% done`);
+		.map((e, i) => Math.round((i / steps) * max));
+	let counter = 0;
+	let last_index = 0;
+	while (true) {
+		if (counter > max) {
+			yield;
+		} else if (hits[last_index] === counter) {
+			logger.log(`Working, ${((counter / max) * 100).toFixed(2)}% done`);
+			last_index++;
+			counter++;
+			yield;
+		} else {
+			counter++;
+			yield;
+		}
+	}
 }
 
-async function insert_files(directory, insert_func){
+async function insert_files (directory, insert_func) {
+	logger.log(`Reading folder ${directory}`);
 	const inserts = fs.readdirSync(directory);
-
-	let i = 0; // Index counter
-	for(const file_name of inserts){
+	const counter = make_percent_counter(inserts.length, 1000);
+	for (const file_name of inserts) {
 		const file_path = path.join(directory, file_name);
 
 		logger.debug(`Reading ${file_name}`);
-		const text = await fsp.readFile(file_path);
+		const text = await files.fsp.readFile(file_path);
 		const data = JSON.parse(text);
 
 		logger.debug(`Inserting ${file_name}`);
 		await insert_func(data);
 
-		i++;
-		percent_counter(i, inserts.length, 100);
+		counter.next();
 	}
 }
 
 // Used like nice_query(sql.script, $1, $2, $3, $4);
-async function nice_query(script, ...fills){
+async function nice_query (script, ...fills) {
+	// No catch, because we let other functions do that
 	return db.query(script, fills.map(e => JSON.stringify(e)))
 		.then(e => e.rows);
-		// No catch, because we let other functions do that
 }
 
 // Used for when you dont want to stringify
-async function nice_query_raw(script, ...fills){
+async function nice_query_raw (script, ...fills) {
+	// No catch, because we let other functions do that
 	return db.query(script, fills)
 		.then(e => e.rows);
-		// No catch, because we let other functions do that
 }
 
 module.exports = {
 	sql: make_all_sql(Object.keys(options.sites)),
-	counter: percent_counter,
+	counter: make_percent_counter,
 	options: options.sites,
 
 	db: {
@@ -96,10 +103,11 @@ module.exports = {
 
 	apis: {
 		e621: (() => {
-			const api_gen = require('e621_api');
+			const E621 = require(e621_api_path);
 			const user_agent = options.sites.e621.user_agent;
-			const delay = options.sites.e621.page_delay;
-			return new api_gen(user_agent, delay);
+			const username = options.sites.e621.username;
+			const api_key = options.sites.e621.api_key;
+			return new E621(user_agent, username, api_key);
 		})()
 
 		// Disabled because it requires this file
@@ -107,25 +115,6 @@ module.exports = {
 		// furry_network: require('./sites/furry_network/api.js')
 	},
 
-	...files, /* Object for this file
-	request: request_json,
-	raw_request: raw_request,
-	save: {
-		url: save_url,
-		data: save_data,
-		json: save_json,
-		multiple: download_image_limited,
-		test: test_file
-	},
-
-	folders: {
-		make: make_folder,
-		make_files: make_image_folders
-	},
-
-	md5: md5_f */
-
-	...logger_obj /* Object for this file
-	logger: logger_utils.create,
-	logger_level: logger_utils.set */
+	...files,
+	...logger_obj
 };

@@ -26,12 +26,14 @@ async function insert_posts (post_array) {
 
 async function download_minimal_posts () {
 	const max_id = await query(sql.max_change).then(e => e[0].max || 0);
-	logger.log(`Max id is ${max_id}. Downloading posts in descending order`);
+	logger.log(`Max change is ${max_id}. Downloading posts in ascending order`);
 	for (let page = 1; true; page++) {
-		logger.log(`Getting page ${page} of results`);
-		const posts = await e621.post_search(`change:>${max_id} order:-change`, page)
+		logger.debug(`Getting page ${page} of results`);
+		const posts = await e621.post_search(`change:>${max_id} order:-change status:any`, page)
 			.then(e => e.posts)
 			.then(e => add_posts(e));
+		const new_max_id = posts.reduce((acc, e) => Math.max(acc, e.change_seq), 0) || max_id;
+		logger.log(`Got page ${page} of results with ${posts.length} changes. New max change is ${new_max_id}`);
 		if (posts.length !== 320) {
 			break;
 		}
@@ -40,7 +42,7 @@ async function download_minimal_posts () {
 
 async function download_bulk_posts () {
 	const posts = [];
-	const search = e621.post_search_iterator('');
+	const search = e621.post_search_iterator('status:any');
 	for await (const post of search) {
 		posts.push(post);
 		if (posts.length > 320) {
@@ -73,12 +75,32 @@ async function import_files (folder_path) {
 	return utils.db.insert_files(folder_path, insert_posts);
 }
 
+async function import_md5_csv (file_path) {
+	if (file_path === undefined || file_path === '' || file_path === null) {
+		throw new Error('File path must be supplied as an option');
+	}
+
+	const data = await utils.fsp.readFile(file_path);
+	const values = data.split('\n')
+		.map(e => e.split(','))
+		.map(e => e.map(p => p.replace(/"/g, '')))
+		.map(e => ({
+			md5: e[0],
+			status: e[1]
+		}));
+
+	const counter = utils.counter(values.length, 1000);
+	for (const a of values) {
+		counter.next();
+		await query_raw(sql.update_image, a.md5, a.status, a.md5);
+	}
+	console.log(values);
+}
+
 module.exports = {
-	none: () => {
-		logger.error('Did not understand the command');
-	},
 	minimal: download_minimal_posts,
 	bulk: download_bulk_posts,
 	images: download_images,
-	import: import_files
+	import_json: import_files,
+	import_md5_csv: import_md5_csv
 };

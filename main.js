@@ -5,11 +5,6 @@ const logger = utils.logger('start');
 utils.logger_level(args.debug);
 
 const sites = {
-	none: {
-		public: {
-			none: () => logger.error('Unknown command')
-		}
-	},
 	e621: require('./sites/e621/e621.js'),
 	furry_network: require('./sites/furry_network/furry_network.js'),
 	general: {
@@ -42,12 +37,20 @@ async function run () {
 	await sites.general.every();
 
 	const site_string = args.s || args.schema || 'none';
+	const site = sites[site_string] || null;
 	const command_string = args.c || args.command || 'none';
-	const site = sites[site_string] || sites.none;
-	const command = site[command_string] || site.none;
+	const command = site === null ? null : (site[command_string] || null);
 
 	try {
-		await command(...args._);
+		if (site_string === 'none' || site === null) {
+			logger.error('Incorrect site option (-s). Acceptable options are:');
+			logger.error(`[${Object.keys(sites).join(', ')}]`);
+		} else if (command_string === 'none' || command === null) {
+			logger.error(`Incorrect command option (-c). Acceptable options for ${site_string} are:`);
+			logger.error(`[${Object.keys(site).join(', ')}]`);
+		} else {
+			await command(...args._);
+		}
 	} catch (e) {
 		logger.d_error('Something went wrong');
 		logger.error(e);

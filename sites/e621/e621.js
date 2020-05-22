@@ -80,7 +80,7 @@ async function import_md5_csv (file_path) {
 		throw new Error('File path must be supplied as an option');
 	}
 
-	const data = await utils.fsp.readFile(file_path);
+	const data = await utils.fsp.readFile(file_path, 'utf8');
 	const values = data.split('\n')
 		.map(e => e.split(','))
 		.map(e => e.map(p => p.replace(/"/g, '')))

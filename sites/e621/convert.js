@@ -22,7 +22,7 @@ function tag_type (type) {
 module.exports = {
 	file: (e) => ({
 		given_md5: e.file.md5,
-		file_type: e.file.ext,
+		file_type: e.file.ext.replace('del.', ''),
 		actual_md5: null,
 		status: null
 	}),

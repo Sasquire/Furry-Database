@@ -60,6 +60,7 @@ end $$;
 -- if you really want those, just download the
 -- comments. it can't be that large
 create table if not exists e621.change_history (
+	post_id     int not null,
 	change_seq  int not null,
 	created_at  timestamp without time zone not null,
 	updated_at  timestamp without time zone not null,
@@ -93,21 +94,14 @@ create table if not exists e621.change_history (
 	constraint posts_pkey primary key (change_seq)
 );
 
-create table if not exists e621.posts_change_seq (
-	post_id    int not null,
-	change_seq int not null,
-	--
-	constraint post_change_seq_change_seq_fk foreign key (change_seq) references e621.change_history(change_seq)
-);
-
-create table if not exists e621.md5s (
+create table if not exists e621.files (
 	given_md5  char(32) not null,
 	file_type  e621.file_type not null,
 	status     char(4),
 	actual_md5 char(32),
 	--
-	constraint md5s_pk            primary key (given_md5),
-	constraint md5s_un_actual_md5 unique (actual_md5)
+	constraint files_pk            primary key (given_md5),
+	constraint files_un_actual_md5 unique (actual_md5)
 );
 
 create table if not exists e621.pools (
@@ -147,5 +141,5 @@ create or replace view e621.urls as (
 			'.',
 			file_type
 		) as url
-	from e621.md5s
+	from e621.files
 );

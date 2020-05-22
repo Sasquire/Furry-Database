@@ -1,1 +1,0 @@
-select status from e621.posts where post_id = $1;

@@ -19,9 +19,6 @@ async function insert_posts (post_array) {
 
 	logger.all('Insert file objects');
 	await query(sql.insert_files, post_array.map(convert.file));
-
-	logger.all('Insert post_change_id object');
-	await query(sql.insert_post_change, post_array.map(convert.post_change));
 }
 
 async function download_minimal_posts () {
@@ -45,7 +42,7 @@ async function download_bulk_posts () {
 	const search = e621.post_search_iterator('status:any');
 	for await (const post of search) {
 		posts.push(post);
-		if (posts.length > 320) {
+		if (posts.length >= 320) {
 			const low_id = posts.reduce((acc, e) => Math.min(acc, e.id), 1e9);
 			logger.log(`Downloaded 320 posts. New low post ${low_id}`);
 			await add_posts(posts);

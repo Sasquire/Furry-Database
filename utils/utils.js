@@ -65,11 +65,14 @@ async function insert_files (directory, insert_func) {
 		const file_path = path.join(directory, file_name);
 
 		logger.debug(`Reading ${file_name}`);
-		const text = await files.fsp.readFile(file_path);
-		const data = JSON.parse(text);
-
-		logger.debug(`Inserting ${file_name}`);
-		await insert_func(data);
+		const text = await files.fsp.readFile(file_path, 'utf8');
+		if (text === '' || text === undefined || text === null) {
+			logger.debug(`File ${file_name} was empty!`);
+		} else {
+			const data = JSON.parse(text);
+			logger.debug(`Inserting ${file_name}`);
+			await insert_func(data);
+		}
 
 		counter.next();
 	}

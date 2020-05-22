@@ -28,6 +28,7 @@ module.exports = {
 	}),
 
 	change_history: (e) => ({
+		post_id: e.id,
 		change_seq: e.change_seq,
 		created_at: new Date(e.created_at),
 		updated_at: new Date(e.updated_at),
@@ -58,11 +59,6 @@ module.exports = {
 		given_md5: e.file.md5,
 
 		parent_id: e.parent_id
-	}),
-
-	post_change: (e) => ({
-		post_id: e.id,
-		change_seq: e.change_seq
 	}),
 
 	tag: (e) => ({

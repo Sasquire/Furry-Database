@@ -8,7 +8,6 @@ db.on('error', () => false);
 const logger_obj = require('./logger.js');
 const logger = logger_obj.logger('utils');
 const files = require('./files.js');
-const e621_api_path = './../../E621-Api/distribution/e621_API.node.js';
 
 // Reads all sql files from each site
 // {
@@ -37,9 +36,12 @@ function make_all_sql (sites) {
 }
 
 function * make_percent_counter (max, steps) {
-	const hits = new Array(steps)
+	const spaced_hits = new Array(steps)
 		.fill(0)
 		.map((e, i) => Math.round((i / steps) * max));
+	const every_hits = new Array(steps).fill(0).map((e, i) => i);
+	const hits = steps >= max ? every_hits : spaced_hits;
+
 	let counter = 0;
 	let last_index = 0;
 	while (true) {
@@ -85,7 +87,7 @@ async function nice_query (script, ...fills) {
 		.then(e => e.rows);
 }
 
-// Used for when you dont want to stringify
+// Used for when you don't want to stringify
 async function nice_query_raw (script, ...fills) {
 	// No catch, because we let other functions do that
 	return db.query(script, fills)
@@ -106,17 +108,17 @@ module.exports = {
 
 	apis: {
 		e621: (() => {
-			const E621 = require(e621_api_path);
+			const E621 = require('./apis/e621_API.node.js');
 			const user_agent = options.sites.e621.user_agent;
 			const username = options.sites.e621.username;
 			const api_key = options.sites.e621.api_key;
 			return new E621(user_agent, username, api_key);
-		})()
+		})(),
 
-		// Disabled because it requires this file
-		// before this file is finished
-		// furry_network: require('./sites/furry_network/api.js')
+		furry_network: require('./apis/furry_network_api.js')
 	},
+
+	md5: require('./md5.js'),
 
 	...files,
 	...logger_obj

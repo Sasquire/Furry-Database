@@ -68,7 +68,7 @@ async function download_json (url) {
 	}
 }
 
-async function save_json (site, subfolder, json) {
+async function save_json (site, subfolder, json, custom_name) {
 	const site_setting = options.sites[site];
 	if (site_setting === undefined) {
 		logger.error(`Trying to save json for invalid site ${site}`);
@@ -80,7 +80,7 @@ async function save_json (site, subfolder, json) {
 		make_folder(path.join(options.json_path, site));
 		make_folder(path.join(options.json_path, site, subfolder));
 
-		const file_name = `${new Date().toISOString()}.json`;
+		const file_name = custom_name || `${new Date().toISOString()}.json`;
 		const file_path = path.format({
 			dir: path.join(options.json_path, site, subfolder),
 			base: file_name
@@ -222,7 +222,8 @@ module.exports = {
 	save: {
 		url: download_image,
 		json: save_json,
-		multiple: download_image_limited
+		multiple: download_image_limited,
+		binary: save_binary
 	},
 
 	folders: {

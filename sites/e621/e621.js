@@ -91,7 +91,6 @@ async function import_md5_csv (file_path) {
 		counter.next();
 		await query_raw(sql.update_image, a.md5, a.status, a.md5);
 	}
-	console.log(values);
 }
 
 module.exports = {

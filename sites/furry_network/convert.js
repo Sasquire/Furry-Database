@@ -4,7 +4,7 @@
 const utils = require('./../../utils/utils.js');
 const md5 = utils.md5;
 
-function updated_at(post){
+function updated_at (post) {
 	return new Date(Math.max(
 		new Date(post._source.created),
 		new Date(post._source.updated || 0),
@@ -13,8 +13,8 @@ function updated_at(post){
 	));
 }
 
-function get_url(e){
-	switch (e._type){
+function get_url (e) {
+	switch (e._type) {
 		case 'photo':
 		case 'artwork': return e._source.images.original;
 		case 'multimedia': return e._source.url;
@@ -23,8 +23,8 @@ function get_url(e){
 	}
 }
 
-function rating(magic_value){
-	switch (magic_value){
+function rating (magic_value) {
+	switch (magic_value) {
 		case 0: return 'general';
 		case 1: return 'mature';
 		case 2: return 'explicit';
@@ -32,14 +32,14 @@ function rating(magic_value){
 	}
 }
 
-function file_size(e){
-	return e._type == 'story' ? e._source.content.length : e._source.size;
+function file_size (e) {
+	return e._type === 'story' ? e._source.content.length : e._source.size;
 }
 
 // Ignore e._source.extension because unreliable
 // https://www.iana.org/assignments/media-types/media-types.xhtml
-function file_type(content_type){
-	switch (content_type){
+function file_type (content_type) {
+	switch (content_type) {
 		case 'image/png': return 'png';
 		case 'image/jpeg': return 'jpg';
 		case 'image/gif': return 'gif';
@@ -63,11 +63,11 @@ function file_type(content_type){
 	}
 }
 
-function find_md5(post){
+function find_md5 (post) {
 	// Artwork 1560272 has no md5?
-	if(post._source.md5){
+	if (post._source.md5) {
 		return post._source.md5;
-	} else if(post._type == 'story'){
+	} else if (post._type === 'story') {
 		return md5(post._source.content);
 	} else {
 		// Some md5's can be null because not supplied by API
@@ -85,7 +85,7 @@ module.exports = {
 		file_type: file_type(e._source.content_type),
 
 		status: null,
-		actual_md5: e._type == 'story' ? md5(e._source.content) : null
+		actual_md5: e._type === 'story' ? md5(e._source.content) : null
 	}),
 
 	post: (e) => ({
@@ -110,7 +110,7 @@ module.exports = {
 	}),
 
 	collections: (raw) => raw
-		.filter(e => e._source.collection_ids.length != 0)
+		.filter(e => e._source.collection_ids.length !== 0)
 		.map(e => e._source.collection_ids.map(p => ({
 			post_id: e._source.id,
 			post_type: e._type,

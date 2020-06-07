@@ -81,10 +81,10 @@ async function save_json (site, subfolder, json, custom_name) {
 		const file_path = path.join(folder_path, file_name);
 		const data_buffer = Buffer.from(JSON.stringify(json), 'utf-8');
 
-		const did_save = await write_binary(file_path, data_buffer);
+		const did_save = await write_binary(file_path, data_buffer, true);
 		if (did_save === false) {
 			const new_file_path = path.join(folder_path, `${file_name}.${Math.random().toString()}.json`);
-			await write_binary(new_file_path, data_buffer);
+			await write_binary(new_file_path, data_buffer, true);
 		}
 		return true;
 	}

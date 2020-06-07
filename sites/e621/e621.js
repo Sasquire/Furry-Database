@@ -1,11 +1,14 @@
 const utils = require('./../../utils/utils.js');
 const convert = require('./convert.js');
+const options = utils.sites.e621;
 const query = utils.db.query;
-const query_raw = utils.db.query_raw;
 const sql = utils.sql.e621;
 const e621 = utils.apis.e621;
 const save_json = utils.save.json;
 const logger = utils.logger('e621');
+const save_multiple_url = utils.save.multiple_url;
+const import_json_folder = utils.db.import_json;
+const import_md5_file = utils.db.import_md5;
 
 async function add_posts (post_array) {
 	save_json('e621', 'posts', post_array);
@@ -53,44 +56,15 @@ async function download_bulk_posts () {
 }
 
 async function download_images () {
-	const images = await query_raw(sql.undownloaded_images);
-
-	async function single_post (post, done) {
-		logger.debug(`Saving md5:${post.given_md5}`);
-		const [status, actual_md5] = await utils.save.url(post.url, post.file_type);
-		await query_raw(sql.update_image, post.given_md5, status, actual_md5);
-		done(); // This is the format that neo-async uses
-	}
-
-	return utils.save.multiple(images, 'e621', single_post);
+	return save_multiple_url(sql.undownloaded_images, sql.update_image, options.file_concurrency);
 }
 
 async function import_files (folder_path) {
-	if (folder_path === undefined || folder_path === '' || folder_path === null) {
-		throw new Error('Folder path must be supplied as an option');
-	}
-	return utils.db.insert_files(folder_path, insert_posts);
+	return import_json_folder(folder_path, insert_posts);
 }
 
 async function import_md5_csv (file_path) {
-	if (file_path === undefined || file_path === '' || file_path === null) {
-		throw new Error('File path must be supplied as an option');
-	}
-
-	const data = await utils.fsp.readFile(file_path, 'utf8');
-	const values = data.split('\n')
-		.map(e => e.split(','))
-		.map(e => e.map(p => p.replace(/"/g, '')))
-		.map(e => ({
-			md5: e[0],
-			status: e[1]
-		}));
-
-	const counter = utils.counter(values.length, 1000);
-	for (const a of values) {
-		counter.next();
-		await query_raw(sql.update_image, a.md5, a.status, a.md5);
-	}
+	return import_md5_file(file_path, sql.update_image);
 }
 
 module.exports = {

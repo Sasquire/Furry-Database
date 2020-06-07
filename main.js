@@ -1,4 +1,3 @@
-/* eslint-disable global-require */
 const args = require('minimist')(process.argv.slice(2));
 const utils = require('./utils/utils.js');
 const logger = utils.logger('start');
@@ -7,8 +6,7 @@ utils.logger_level(args.debug);
 const sites = {
 	e621: require('./sites/e621/e621.js'),
 	furry_network: require('./sites/furry_network/furry_network.js'),
-	general: {
-		none: () => logger.error('Unknown command'),
+	maintenance: {
 		"don't do this it drops the db": async () => {
 			logger.debug('Deleting the database');
 			await run_all_scripts_named('destroy');
@@ -18,7 +16,8 @@ const sites = {
 			logger.debug('Running all sql init scripts');
 			await run_all_scripts_named('init');
 			logger.d_log('Initiated');
-		}
+		},
+		...require('./sites/maintenance/maintenance.js')
 	}
 };
 
@@ -34,7 +33,7 @@ async function run_all_scripts_named (script_name) {
 
 async function run () {
 	logger.d_log('Started');
-	await sites.general.every();
+	await sites.maintenance.every();
 
 	const site_string = args.s || args.schema || 'none';
 	const site = sites[site_string] || null;

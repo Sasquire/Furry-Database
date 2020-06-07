@@ -9,6 +9,11 @@ const query = utils.db.query;
 const query_raw = utils.db.query_raw;
 const sql = utils.sql.furry_network;
 const logger = utils.logger('FurryN');
+const save_json = utils.save.json;
+const save_multiple_url = utils.save.multiple_url;
+const import_json_folder = utils.db.import_json;
+const import_md5_file = utils.db.import_md5;
+const options = utils.sites.furry_network;
 
 const types = [
 	'artwork',
@@ -28,17 +33,12 @@ async function all_minimal (bearer) {
 	}
 }
 
-async function all_bulk (bearer) {
-	if (bearer === null || bearer === undefined || bearer === '') {
-		throw new Error('Bearer option must be supplied as first option');
-	} else {
-		for (const type of types) {
-			logger.log(`Updating type ${type}`);
-			await typed_bulk(bearer, type, 0);
-		}
-	}
+async function typed_minimal (bearer, type) {
+	const max = await query_raw(sql.max_date, type);
+	const max_date = new Date(max[0] ? max[0].max : 0);
+	return typed_date(bearer, type, max_date, 0);
 }
-// 1333
+
 async function typed_bulk (bearer, type, starting_page) {
 	if (bearer === null || bearer === undefined || bearer === '') {
 		throw new Error('Bearer option must be supplied as first option');
@@ -51,12 +51,6 @@ async function typed_bulk (bearer, type, starting_page) {
 		const page = Number.isNaN(page_guess) ? 0 : page_guess;
 		return typed_date(bearer, type, new Date(0), page);
 	}
-}
-
-async function typed_minimal (bearer, type) {
-	const max = await utils.db.query_raw(sql.max_date, type);
-	const max_date = new Date(max[0] ? max[0].max : 0);
-	return typed_date(bearer, type, max_date, 0);
 }
 
 async function typed_date (bearer, type, max_date, starting_page) {
@@ -78,7 +72,7 @@ async function add_posts (post_array, type) {
 		.sort((a, b) => a - b)
 		.slice(0, 1)[0] || new Date(0);
 	const min_date_name = min_date.toISOString() + '.json';
-	utils.save.json('furry_network', type, post_array, min_date_name);
+	save_json('furry_network', type, post_array, min_date_name);
 	await insert_posts(post_array);
 	return post_array;
 }
@@ -96,23 +90,10 @@ async function insert_posts (post_array) {
 	logger.debug('Inserting collection');
 	await query(sql.insert_collection, convert.collections(post_array));
 
-	if (utils.options.furry_network.save_stories) {
+	if (utils.sites.furry_network.save_stories) {
 		logger.debug('Trying to save stories');
 		await save_text(post_array);
 	}
-}
-
-async function import_json (folder_path) {
-	if (folder_path === undefined || folder_path === '' || folder_path === null) {
-		throw new Error('Folder path must be supplied as an option');
-	}
-	return utils.db.insert_files(folder_path, e => {
-		if (e.before !== undefined || e.hits !== undefined || e.after !== undefined) {
-			return insert_posts([...e.before, ...e.hits, ...e.after]);
-		} else {
-			return insert_posts(e);
-		}
-	});
 }
 
 async function save_text (posts) {
@@ -122,56 +103,33 @@ async function save_text (posts) {
 		const post_type = story._type;
 		const status = 'good';
 		const text = Buffer.from(story._source.content);
-		const md5 = await utils.save.binary(text, 'txt');
+		const md5 = await utils.save.image(text, 'txt');
 		await query_raw(sql.update_image, post_id, post_type, status, md5);
 	}
 }
 
 async function download_images () {
-	logger.log('Downloading un-downloaded images');
-	const images = await query(sql.undownloaded_images);
+	return save_multiple_url(sql.undownloaded_images, sql.update_image, options.file_concurrency);
+}
 
-	async function single_post (post, done) {
-		logger.debug(`Saving post ${post.post_type} ${post.post_id}`);
-		const post_type = post.post_type;
-		const post_id = post.post_id;
-		const [status, md5] = await utils.save.url(post.url, post.file_type);
-		await query_raw(sql.update_image, post_id, post_type, status, md5);
-		done(); // This is the format that neo-async uses
-	}
-
-	await utils.save.multiple(images, 'furry_network', single_post);
+async function import_files (folder_path) {
+	return import_json_folder(folder_path, e => {
+		if (e.before !== undefined || e.hits !== undefined || e.after !== undefined) {
+			return insert_posts([...e.before, ...e.hits, ...e.after]);
+		} else {
+			return insert_posts(e);
+		}
+	});
 }
 
 async function import_md5_csv (file_path) {
-	// post_id, post_type, status, actual_md5
-	if (file_path === undefined || file_path === '' || file_path === null) {
-		throw new Error('File path must be supplied as an option');
-	}
-
-	const data = await utils.fsp.readFile(file_path, 'utf8');
-	const values = data.split('\n')
-		.map(e => e.split(','))
-		.map(e => e.map(p => p.replace(/"/g, '')))
-		.map(e => ({
-			post_id: parseInt(e[0], 10),
-			post_type: e[1],
-			status: e[2],
-			md5: e[3]
-		}));
-
-	const counter = utils.counter(values.length, 1000);
-	for (const row of values) {
-		counter.next();
-		await query_raw(sql.update_image, row.post_id, row.post_type, row.status, row.md5);
-	}
+	return import_md5_file(file_path, sql.update_image);
 }
 
 module.exports = {
 	minimal: all_minimal,
-	bulk: all_bulk,
 	typed_bulk: typed_bulk,
 	images: download_images,
-	import_json: import_json,
+	import_json: import_files,
 	import_md5_csv: import_md5_csv
 };

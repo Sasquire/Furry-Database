@@ -1,8 +1,7 @@
 /* eslint-disable no-underscore-dangle */
-// Furrynetwork has a lot of underscore dangle
+// FurryNetwork has a lot of underscore dangle
 
-const utils = require('./../../utils/utils.js');
-const md5 = utils.md5;
+const { md5 } = require('./../../utils/utils.js');
 
 function updated_at (post) {
 	return new Date(Math.max(

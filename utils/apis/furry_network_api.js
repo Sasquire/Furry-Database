@@ -1,6 +1,6 @@
 const axios = require('axios');
 const settings = require('./../../options.json').sites.furry_network;
-const logger = require('./../logger.js').logger('FN API');
+const logger = require('./../logger_factory.js').logger('FN API');
 
 async function download_page (type, page_num, bearer, tries = 0) {
 	const request_options = {

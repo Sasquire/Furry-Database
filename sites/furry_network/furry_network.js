@@ -104,7 +104,7 @@ async function save_text (posts) {
 		const status = 'good';
 		const text = Buffer.from(story._source.content);
 		const md5 = await utils.save.image(text, 'txt');
-		await query_raw(sql.update_image, post_id, post_type, status, md5);
+		await query_raw(sql.update_image, status, md5, post_id, post_type);
 	}
 }
 

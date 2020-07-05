@@ -3,6 +3,7 @@ const utils = require('./../../utils/utils.js');
 const options = utils.options;
 const fs = utils.fs;
 const md5_f = utils.md5;
+const query_raw = utils.db.query_raw;
 const logger = utils.logger('Maint');
 
 async function check_all_files () {
@@ -58,7 +59,28 @@ async function create_folder_structure () {
 	logger.log('Made json folders');
 }
 
+async function all_files_accounted_for () {
+	const search_functions = Object.values(utils.sql)
+		.map(e => e.find_actual_md5)
+		.filter(e => e);
+	for (const pair of make_all_pairs()) {
+		logger.log(`Searching through pair ${pair.join('/')}`);
+		const list = fs.readdirSync(path.join(options.image_path, pair[0], pair[1]))
+			.map(e => e.substring(0, 32));
+		for (const md5 of list) {
+			logger.debug(`Searching for md5 ${md5}`);
+			const results = await Promise.all(
+				search_functions.map(e => query_raw(e, md5))
+			);
+			if (results.some(e => e.length !== 0) === false) {
+				logger.error(`md5 ${md5} was not found in any database`);
+			}
+		}
+	}
+}
+
 module.exports = {
-	check_all_files: check_all_files,
-	create_folders: create_folder_structure
+	check_file_md5s: check_all_files,
+	create_folders: create_folder_structure,
+	all_files_accounted_for: all_files_accounted_for
 };

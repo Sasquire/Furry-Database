@@ -45,11 +45,14 @@ do $$ begin
 
 	if not exists (select 1 from enum_info where enum_name = 'tag_type') then
 		create type e621.tag_type as enum (
-			'general',
-			'artist',
-			'copyright',
-			'character',
-			'species'
+			'general', -- 0
+			'artist', -- 1
+			'copyright', -- 3
+			'character', -- 4
+			'species', -- 5
+			'invalid', --6
+			'meta', -- 7
+			'lore' -- 8
 		);
 	end if;
 

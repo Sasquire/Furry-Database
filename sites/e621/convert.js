@@ -15,6 +15,9 @@ function tag_type (type) {
 		case 3: return 'copyright';
 		case 4: return 'character';
 		case 5: return 'species';
+		case 6: return 'invalid';
+		case 7: return 'meta';
+		case 8: return 'lore';
 		default: return 'error'; // Shouldn't happen. Throws error for db
 	}
 }
@@ -64,6 +67,6 @@ module.exports = {
 	tag: (e) => ({
 		tag_id: e.id,
 		tag_name: e.name,
-		tag_type: tag_type(e.type)
+		tag_type: tag_type(e.category)
 	})
 };

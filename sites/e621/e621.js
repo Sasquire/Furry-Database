@@ -10,6 +10,12 @@ const save_multiple_url = utils.save.multiple_url;
 const import_json_folder = utils.db.import_json;
 const import_md5_file = utils.db.import_md5;
 
+async function add_tags (tag_array) {
+	save_json('e621', 'tags', tag_array);
+	await insert_tags(tag_array);
+	return tag_array;
+}
+
 async function add_posts (post_array) {
 	save_json('e621', 'posts', post_array);
 	await insert_posts(post_array);
@@ -22,6 +28,11 @@ async function insert_posts (post_array) {
 
 	logger.all('Insert file objects');
 	await query(sql.insert_files, post_array.map(convert.file));
+}
+
+async function insert_tags (tag_array) {
+	logger.all('Inserting tag objects');
+	await query(sql.insert_tags, tag_array.map(convert.tag));
 }
 
 async function download_minimal_posts () {
@@ -55,6 +66,21 @@ async function download_bulk_posts () {
 	await add_posts(posts);
 }
 
+async function download_bulk_tags () {
+	const tags = [];
+	const search = e621.tag_search_iterator({ hide_empty: false });
+	for await (const tag of search) {
+		tags.push(tag);
+		if (tags.length >= 1000) {
+			const low_id = tags.reduce((acc, e) => Math.min(acc, e.id), 1e9);
+			logger.log(`Downloaded 1000 tags. New low id ${low_id}`);
+			await add_tags(tags);
+			tags.length = 0;
+		}
+	}
+	await add_tags(tags);
+}
+
 async function download_images () {
 	return save_multiple_url(sql.undownloaded_images, sql.update_image, options.file_concurrency);
 }
@@ -72,5 +98,6 @@ module.exports = {
 	bulk: download_bulk_posts,
 	images: download_images,
 	import_json: import_files,
-	import_md5_csv: import_md5_csv
+	import_md5_csv: import_md5_csv,
+	bulk_tags: download_bulk_tags
 };

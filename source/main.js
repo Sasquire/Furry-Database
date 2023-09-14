@@ -19,17 +19,17 @@ const timers = [{
 	name: 'minutely',
 	delay: 1000 * 60 * 3, // Every 3 minutes
 	last_time_triggered: new Date().getTime(),
-	trigger: () => Promise.allSettled(sites.map(e => e.update_minutely))
+	trigger: () => Promise.allSettled(sites.map(e => e.update_minutely()))
 }, {
 	name: 'hourly',
 	delay: 1000 * 60 * 50, // Every 50 minutes
 	last_time_triggered: new Date().getTime(),
-	trigger: () => Promise.allSettled(sites.map(e => e.update_hourly))
+	trigger: () => Promise.allSettled(sites.map(e => e.update_hourly()))
 }, {
 	name: 'daily',
 	delay: 1000 * 60 * 60 * 23, // Every 23 hours
 	last_time_triggered: new Date().getTime(),
-	trigger: () => Promise.allSettled(sites.map(e => e.update_daily))
+	trigger: () => Promise.allSettled(sites.map(e => e.update_daily()))
 }];
 
 async function main () {

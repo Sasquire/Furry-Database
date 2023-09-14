@@ -1,1 +1,0 @@
-drop schema e621 cascade;

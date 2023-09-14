@@ -1,1 +1,0 @@
-drop schema fn cascade;

@@ -1,8 +1,4 @@
-node_modules
+Furry-Database/
+node_modules/
 package-lock.json
-options.json
-json
-files
-test.js
-images
-logs
+saved_data/

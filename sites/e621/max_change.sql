@@ -1,1 +1,0 @@
-select max(change_seq) from e621.change_history;

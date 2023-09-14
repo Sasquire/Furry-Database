@@ -1,0 +1,5 @@
+*
+!source/
+!package.json
+!saved_data/
+!secrets.env

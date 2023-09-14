@@ -1,1 +1,0 @@
-select max(updated_at) from fn.posts where post_type = $1;

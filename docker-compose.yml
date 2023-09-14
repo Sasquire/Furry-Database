@@ -1,0 +1,28 @@
+version: '3.8'
+name: "furry_database"
+services:
+    database:
+        image: postgres
+        restart: "unless-stopped"
+        env_file:
+          - secrets.env
+        container_name: furry_database_postgres
+        volumes:
+          - ./saved_data/postgres/:/var/lib/postgresql/data/
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready"]
+            interval: 2s
+            timeout: 10s
+            retries: 10
+        ports:
+          - 5432:5432
+    downloader:
+        build: .
+        container_name: furry_database_downloader
+        depends_on:
+            database:
+                condition: service_healthy
+        volumes:
+          - ./saved_data/images/:/images/
+          - ./saved_data/json/:/json/
+          - ./saved_data/csv/:/csvs/

@@ -3,7 +3,7 @@ import binary_search from 'binary-search';
 import stream_csv from '../../utils/stream_csv.mjs';
 import read_sql from './../../utils/read_sql.js';
 import { join } from 'path';
-import convert from './convert.js';
+import convert from './convert.mjs';
 import create_logger from './../../utils/logger.js';
 import { query } from './../../utils/database.js';
 

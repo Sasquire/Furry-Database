@@ -1,5 +1,5 @@
 import e621 from './sites/e621/e621.mjs';
-import create_logger from './../../utils/logger.js';
+import create_logger from './utils/logger.js';
 
 const log = create_logger('main');
 const sites = [

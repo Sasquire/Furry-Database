@@ -18,6 +18,7 @@ services:
     downloader:
         build: .
         container_name: furry_database_downloader
+        restart: "unless-stopped"
         depends_on:
             database:
                 condition: service_healthy

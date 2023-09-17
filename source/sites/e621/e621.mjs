@@ -47,7 +47,7 @@ async function update_monthly () {
 // This is really only an issue if there are a large amount of posts
 // to insert at the same time. This *shouldn't* be a problem because
 // this command is meant to be RUN OFTEN.
-// A simple test shows 5 days = 100,000 change = 50,000 posts = 156 pages
+// A simple test shows 5 days = 100,000 change = 50,000 posts = 150 pages
 async function update_posts () {
 	const max_change_result = await query('select max(change_seq) from e621.posts;');
 	const max_change = max_change_result[0].max;
@@ -69,6 +69,8 @@ async function update_posts () {
 
 async function update_images () {
 	const links = await query('select url, file_ext, given_md5 from e621.urls where status is null;');
+
+	log.info(`Downloading ${links.length} images`);
 	await download_image_limited(5, links, update_image);
 
 	async function update_image ({ status, image_md5, given_md5 }) {

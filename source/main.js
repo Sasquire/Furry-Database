@@ -1,5 +1,7 @@
 import e621 from './sites/e621/e621.mjs';
+import create_logger from './../../utils/logger.js';
 
+const log = create_logger('main');
 const sites = [
 	e621
 ];
@@ -39,9 +41,17 @@ async function main () {
 		const now = new Date().getTime();
 		const timers_to_trigger = timers.filter(e => (now - e.last_time_triggered) >= e.delay);
 
-		timers_to_trigger.forEach((e, i) => (timers[i].last_time_triggered = now));
-		await Promise.allSettled(timers_to_trigger.map(e => e.trigger()));
+		timers_to_trigger.forEach(e => {
+			const index = timers.findIndex(p => p.name === e.name);
+			timers[index].last_time_triggered = now;
+		});
 
+		if (timers_to_trigger.length !== 0) {
+			log.debug(`Will run [${timers_to_trigger.map(e => e.name).join(', ')}]`);
+			await Promise.allSettled(timers_to_trigger.map(e => e.trigger()));
+		}
+
+		log.debug('Waiting for timer to trigger');
 		await sleep(1000 * 10); // Wait 10s incase nothing triggered
 	}
 }
